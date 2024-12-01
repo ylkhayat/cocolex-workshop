@@ -1,0 +1,127 @@
+import sys
+if '/srv/elkhyo/lexquo' not in sys.path:
+    sys.path.insert(0, '/srv/elkhyo/lexquo')
+from generation.baselines.cad.cad import CAD
+from generation.workshop.experiment_utils import (
+    add_experiment,
+    build_args_parser,
+    evaluate,
+    print_args,
+    reshape_and_save_experiment_results,
+    setup_dataset
+    )
+from slack_notifier import send_slack_notification
+from tqdm import tqdm
+import os
+import torch
+
+args = build_args_parser(method="cad")
+
+batch_size = args.batch_size
+dataset = args.dataset
+dataset_percentage = args.dataset_percentage
+decoding_strategy = args.decoding_strategy
+device = args.device
+max_new_tokens = args.max_new_tokens
+model_name = args.model
+repetition_penalty = args.repetition_penalty
+setup = args.setup
+split = args.split
+strategy = args.strategy
+top_k_passages = args.top_k_passages
+use_instructions = args.use_instructions
+variant = args.variant
+
+method = 'cad'
+if strategy == 'constant':
+    alphas = [0.5]
+if strategy == 'adacad':
+    method = "adacad"
+args.method = method
+print_args(args)
+
+device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
+
+safe_dataset_percentage = dataset_percentage * 10 if dataset_percentage < 1 else 1.0
+config = {
+    "dataset_percentage": safe_dataset_percentage,
+    "setup": setup,
+    "split": split,
+    "top_k_passages": top_k_passages,
+    "use_instructions": use_instructions
+}
+
+
+
+cad_model = CAD(model_name=model_name, device=device.index)
+clerc_dataset, original_dataset_length = setup_dataset(config,
+                              tokenizer=cad_model.tokenizer,
+                              return_original_dataset_length=True)
+needed_for_experiment = int(original_dataset_length * dataset_percentage)
+print(f"[!] needed for experiment: {needed_for_experiment}")
+def carry_experiment(alpha):
+    results = []
+    os.makedirs("./basement", exist_ok=True)
+    try:
+        start_index = 0
+        sentences_to_go = needed_for_experiment
+        pbar = tqdm(total=needed_for_experiment, desc="Sentences to go")
+        for batch in clerc_dataset.iter(batch_size=batch_size):
+            prefixes = batch['previous_text']
+            refs = batch['gold_text']
+            docids = batch['docid']
+            prompts = batch['prompt']
+            contexts = batch['context']
+            context_prefixes = batch['context_prefix']
+            contexts = [f"{context_prefix}\n\n{context}" for context_prefix, context in zip(context_prefixes, contexts)]
+            outputs = cad_model.generate(
+                prompts=prompts,
+                contexts=contexts,
+                max_length=max_new_tokens,
+                alpha=alpha,
+                method=method,
+                decoding_strategy=decoding_strategy,
+                use_repetition_penalty=repetition_penalty > 1.0,
+                repetition_penalty_value=repetition_penalty
+                )
+            sent_lengths = [len(output) for output in outputs]
+            valid_sents = [sent_length > max_new_tokens//2 for sent_length in sent_lengths]
+            valid_outputs = [output for output, valid_sent in zip(outputs, valid_sents) if valid_sent]
+            sentences_to_go -= len(valid_outputs)
+            if len(valid_outputs) == 0:
+                continue
+            generated_texts = cad_model.tokenizer.batch_decode(valid_outputs, skip_special_tokens=True)
+            for index, (docid, generated_text, gold_text, prev_text) in enumerate(zip(docids, generated_texts, refs, prefixes)):
+                new_object = {
+                    "meta": {}
+                }
+                new_object["meta"]['docid'] = docid
+                new_object["meta"]['index'] = (split, start_index + index)
+                new_object["meta"]['gold_text'] = gold_text
+                new_object["meta"]['previous_text'] = prev_text
+                new_object["gen"] = generated_text
+                results.append(new_object)
+            pbar.update(len(valid_outputs))
+            if sentences_to_go <= 0:
+                pbar.close()
+                break
+        experiment_results = evaluate(results, device)
+        experiment_results['results'] = results
+        if alpha is not None:
+            experiment_results['alpha'] = alpha
+        current_args = vars(args)
+        current_args['alpha'] = alpha
+        results_output_file, _ = reshape_and_save_experiment_results(experiment_results, current_args)
+        add_experiment(experiment_results, current_args)
+        send_slack_notification(f"[!] Experiment completed: {results_output_file}!")
+    except Exception as e:
+        print(f"[!] Error: {e}")
+        send_slack_notification(f"[x] Error in experiment: {results_output_file}!")
+        raise e
+    
+if method == 'cad':
+    for alpha in tqdm(alphas, desc="Alpha"):
+        carry_experiment(alpha)
+else:
+    carry_experiment(None)
+    
