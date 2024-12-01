@@ -9,10 +9,9 @@ from experiment_utils import (
     reshape_and_save_experiment_results,
     setup_dataset
     )
+from tqdm import tqdm
 from slack_notifier import send_slack_notification
 from generation.baselines.rag.rag import RAG
-from transformers import pipeline
-import os
 import torch
 
 args = build_args_parser(method="rag")
@@ -37,6 +36,7 @@ args.method = method
 print_args(args)
 
 config = {
+    "dataset": dataset,
     "dataset_percentage": dataset_percentage,
     "setup": setup,
     "split": split,
@@ -45,45 +45,40 @@ config = {
 }
 
 device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
-
-legal_advisor = pipeline("text-generation",
-                         model=model_name,
-                         device_map=device if device != 'auto' else 'auto',
-                         torch_dtype=torch.float16,
-                         max_new_tokens=max_new_tokens,
-                         batch_size=batch_size)
-
+rag_model = RAG(model_name=model_name, device=device.index)
 clerc_dataset = setup_dataset(config,
-                              tokenizer=legal_advisor.tokenizer)
-legal_advisor.tokenizer.pad_token = legal_advisor.tokenizer.eos_token
-legal_advisor.model.generation_config.pad_token_id = legal_advisor.tokenizer.eos_token_id
+                              tokenizer=rag_model.tokenizer)
 
 results = []
 try:
     start_index = 0
-    prompts = clerc_dataset['prompt']
-    contexts = clerc_dataset['context']
-    context_prefixes = clerc_dataset['context_prefix']
-    inputs = [f"{context_prefix}\n\n{context}{legal_advisor.tokenizer.eos_token}{prompt}"
-                for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
-    generations = legal_advisor(
-        inputs,
-        do_sample=False,
-        batch_size=batch_size,
-        return_full_text=False,
-        repetition_penalty=repetition_penalty,
-    )
-    generated_texts = [generated[-1]['generated_text'] for generated in generations]
-    for index, (docid, generated_text, gold_text, prev_text) in enumerate(zip(clerc_dataset['docid'], generated_texts, clerc_dataset['gold_text'], clerc_dataset['previous_text'])):
-        new_object = {
-            "meta": {}
-        }
-        new_object["meta"]['docid'] = docid
-        new_object["meta"]['index'] = (split, start_index + index)
-        new_object["meta"]['gold_text'] = gold_text
-        new_object["meta"]['previous_text'] = prev_text
-        new_object["gen"] = generated_text
-        results.append(new_object)
+    for batch in tqdm(clerc_dataset.iter(batch_size=batch_size), desc="Processing batches", total=len(clerc_dataset) // batch_size):
+        prefixes = batch['previous_text']
+        docids = batch['docid']
+        refs = batch['gold_text']
+        context_prefixes = batch['context_prefix']
+        contexts = batch['context']
+        prompts = batch['prompt']
+        prompts = [f"{context_prefix}\n\n{context}{rag_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
+        outputs = rag_model.generate(
+            prompts=prompts,
+            max_length=max_new_tokens,
+            decoding_strategy=decoding_strategy,
+            use_repetition_penalty=repetition_penalty > 1.0,
+            repetition_penalty_value=repetition_penalty
+            )
+        generated_texts = rag_model.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        for index, (docid, generated_text, gold_text, prev_text, prompt) in enumerate(zip(docids, generated_texts, refs, prefixes, prompts)):
+            new_object = {
+                "meta": {}
+            }
+            new_object["meta"]['docid'] = docid
+            new_object["meta"]['index'] = (split, start_index + index)
+            new_object["meta"]['gold_text'] = gold_text
+            new_object["meta"]['previous_text'] = prev_text
+            new_object["meta"]['prompt'] = prompt
+            new_object["gen"] = generated_text
+            results.append(new_object)
     experiment_results = evaluate(results, device)
     experiment_results['results'] = results
     results_output_path, meta_output_path = reshape_and_save_experiment_results(experiment_results, vars(args))

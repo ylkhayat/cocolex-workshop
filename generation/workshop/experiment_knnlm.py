@@ -45,6 +45,7 @@ print_args(args)
 device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
 
 config = {
+    "dataset": dataset,
     "dataset_percentage": dataset_percentage,
     "setup": setup,
     "split": split,
@@ -62,7 +63,6 @@ def carry_experiment(lamba,
                      k,
                      layer_index):
     results = []
-    os.makedirs("./basement", exist_ok=True)
     try:
         start_index = 0
         for batch in tqdm(clerc_dataset.iter(batch_size=batch_size), desc="Processing batches", total=len(clerc_dataset) // batch_size):
@@ -75,7 +75,6 @@ def carry_experiment(lamba,
             if "context" in variant:
                 prompts = [f"{context_prefix}\n\n{context}{knnlm_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
             if "plus" in variant:
-                # contexts = [['\n'.join(document_parts) for document_parts in meta['oracle_documents']] for meta in batch['meta']]
                 contexts = [meta['oracle_documents'] for meta in batch['meta']]
             outputs = knnlm_model.generate(
                 prompts=prompts,
@@ -94,7 +93,7 @@ def carry_experiment(lamba,
                 repetition_penalty_value=repetition_penalty
                 )
             generated_texts = knnlm_model.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-            for index, (docid, generated_text, gold_text, prev_text) in enumerate(zip(docids, generated_texts, refs, prefixes)):
+            for index, (docid, generated_text, gold_text, prev_text, prompt, context) in enumerate(zip(docids, generated_texts, refs, prefixes, prompts, contexts)):
                 new_object = {
                     "meta": {}
                 }
@@ -102,6 +101,8 @@ def carry_experiment(lamba,
                 new_object["meta"]['index'] = (split, start_index + index)
                 new_object["meta"]['gold_text'] = gold_text
                 new_object["meta"]['previous_text'] = prev_text
+                new_object["meta"]['prompt'] = prompt
+                new_object["meta"]['context'] = context
                 new_object["gen"] = generated_text
                 results.append(new_object)
         experiment_results = evaluate(results, device)

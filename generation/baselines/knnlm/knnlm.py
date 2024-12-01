@@ -133,7 +133,7 @@ class KNNLM:
             values = current_batch_datastore['values'].reshape(-1)
             query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
                 
-            nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean')
+            nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
             nneighbors.fit(keys)
 
             distances, indices = nneighbors.kneighbors(query_flat)

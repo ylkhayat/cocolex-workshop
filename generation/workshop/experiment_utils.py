@@ -29,7 +29,7 @@ def build_args_parser(method):
     parser.add_argument("--device", type=int, default=0)
     
     if method == 'rag':
-        parser.add_argument("--repetition_penalty", type=float, default=1.3)
+        parser.add_argument("--repetition_penalty", type=float, default=1.5)
     if 'cad' in method:
         parser.add_argument("--repetition_penalty", type=float, default=1.0)
     if 'knnlm' in method:
@@ -37,8 +37,6 @@ def build_args_parser(method):
         parser.add_argument("--entropy_strategy", type=str, choices=['exp', 'exp_norm', 'sig'], default='exp_norm')
         parser.add_argument("--lambda_smoothing_factor", type=float, default=0.3)
         parser.add_argument("--repetition_penalty", type=float, default=1.5)
-    
-
     
     parser.add_argument("--max_new_tokens", type=int, default=200)
     parser.add_argument("--method", type=str)
@@ -74,11 +72,12 @@ def reshape_and_save_experiment_results(scores_results, args):
     scores = {"bert_score", "rouge", "align_score", "unieval"}
     params = {k: v for k, v in args.items() if k not in excluded_keys}
     scores = {k: v for k, v in scores_results.items() if k in scores}
-    param_str = "_".join([f"{key[0]}-{value}" for key, value in params.items()])
+    param_str = "_".join([f"{key[:1]}-{value}" for key, value in params.items()])
 
     model_cleaned = model.replace("/", "_")
-    results_output_path = f"../basement/{dataset}/{model_cleaned}/{split}/{oracle_top_k}/results/{method}__{param_str}.jsonl"
-    meta_output_path = f"../basement/{dataset}/{model_cleaned}/{split}/{oracle_top_k}/meta/{method}__{param_str}.json"
+    common_output_path = f"../basement/{dataset}/{split}/{model_cleaned}/{oracle_top_k}"
+    results_output_path = f"{common_output_path}/results/{method}__{param_str}.jsonl"
+    meta_output_path = f"{common_output_path}/meta/{method}__{param_str}.json"
     os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
     os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)
     try:

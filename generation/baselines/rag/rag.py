@@ -142,13 +142,13 @@ class RAG:
 
         cur_len = 0
         batch_size = len(input_ids)
-        unfinished_sents = input_ids_with_contexts.new(batch_size).fill_(1)
-        sent_lengths = input_ids_with_contexts.new(batch_size).fill_(max_length)
+        unfinished_sents = input_ids.new(batch_size).fill_(1)
+        sent_lengths = input_ids.new(batch_size).fill_(max_length)
 
         generated_tokens = [[] for _ in range(batch_size)] # e.g., [[4132, 102, 29402], [2378, 7893, 23001]]
 
         with torch.no_grad():
-            pbar = tqdm(total=max_length, desc="RAG'ing", position=0)
+            # pbar = tqdm(total=max_length, desc="RAG'ing", position=0)
             while cur_len < max_length:
                 model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 outputs = self.model(**model_inputs,
@@ -167,8 +167,6 @@ class RAG:
                                                     generated_tokens=[set(tokens) for tokens in generated_tokens])
                 
                 input_ids = torch.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
-                input_ids_with_contexts = torch.cat([input_ids_with_contexts, next_token.unsqueeze(-1)], dim=-1)
-
                 cur_len += 1
 
                 for i, token in enumerate(next_token.tolist()):
@@ -180,8 +178,8 @@ class RAG:
 
                 if unfinished_sents.max() == 0:
                     break
-                pbar.update(1)
-            pbar.close()
+            #     pbar.update(1)
+            # pbar.close()
 
         # Return the generated tokens
         return generated_tokens

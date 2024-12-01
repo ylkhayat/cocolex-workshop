@@ -2,15 +2,10 @@
 
 cd "$(dirname "$0")" || exit
 
-. ./dynamic_input_handler.sh --required dataset,setup,split,variant,device,strategy --method knnlm "$@"
+. ./utils/dynamic_input_handler.sh --required dataset,setup,split,variant,device,strategy --method knnlm "$@"
 
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
-model_names=(mistralai/Mistral-7B-Instruct-v0.3)
-for model_name in "${model_names[@]}"; do
-    python experiment_knnlm.py --model "$model_name" \
-                                $(env | grep -E "^[a-z]" | awk -F= '{print "--"$1" "$2}')
-
-done
+python experiment_knnlm.py $(env | grep -E "^[a-z]" | awk -F= '{print "--"$1" "$2}')

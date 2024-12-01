@@ -32,26 +32,27 @@ top_k_passages = args.top_k_passages
 use_instructions = args.use_instructions
 variant = args.variant
 
+only_count_valid = False
 method = 'cad'
 if strategy == 'constant':
     alphas = [0.5]
 if strategy == 'adacad':
     method = "adacad"
 args.method = method
+args.only_count_valid = only_count_valid
 print_args(args)
 
 device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
 
 safe_dataset_percentage = dataset_percentage * 10 if dataset_percentage < 1 else 1.0
 config = {
+    "dataset": dataset,
     "dataset_percentage": safe_dataset_percentage,
     "setup": setup,
     "split": split,
     "top_k_passages": top_k_passages,
     "use_instructions": use_instructions
 }
-
-
 
 cad_model = CAD(model_name=model_name, device=device.index)
 clerc_dataset, original_dataset_length = setup_dataset(config,
@@ -61,7 +62,6 @@ needed_for_experiment = int(original_dataset_length * dataset_percentage)
 print(f"[!] needed for experiment: {needed_for_experiment}")
 def carry_experiment(alpha):
     results = []
-    os.makedirs("./basement", exist_ok=True)
     try:
         start_index = 0
         sentences_to_go = needed_for_experiment
@@ -85,13 +85,16 @@ def carry_experiment(alpha):
                 repetition_penalty_value=repetition_penalty
                 )
             sent_lengths = [len(output) for output in outputs]
-            valid_sents = [sent_length > max_new_tokens//2 for sent_length in sent_lengths]
-            valid_outputs = [output for output, valid_sent in zip(outputs, valid_sents) if valid_sent]
+            if only_count_valid:
+                valid_sents = [sent_length > max_new_tokens//2 for sent_length in sent_lengths]
+                valid_outputs = [output for output, valid_sent in zip(outputs, valid_sents) if valid_sent]
+                if len(valid_outputs) == 0:
+                    continue
+            else:
+                valid_outputs = outputs
             sentences_to_go -= len(valid_outputs)
-            if len(valid_outputs) == 0:
-                continue
             generated_texts = cad_model.tokenizer.batch_decode(valid_outputs, skip_special_tokens=True)
-            for index, (docid, generated_text, gold_text, prev_text) in enumerate(zip(docids, generated_texts, refs, prefixes)):
+            for index, (docid, generated_text, gold_text, prev_text, prompt, context) in enumerate(zip(docids, generated_texts, refs, prefixes, prompts, contexts)):
                 new_object = {
                     "meta": {}
                 }
@@ -99,12 +102,15 @@ def carry_experiment(alpha):
                 new_object["meta"]['index'] = (split, start_index + index)
                 new_object["meta"]['gold_text'] = gold_text
                 new_object["meta"]['previous_text'] = prev_text
+                new_object["meta"]['prompt'] = prompt
+                new_object["meta"]['context'] = context
                 new_object["gen"] = generated_text
                 results.append(new_object)
             pbar.update(len(valid_outputs))
-            if sentences_to_go <= 0:
-                pbar.close()
-                break
+            if only_count_valid:
+                if sentences_to_go <= 0:
+                    break
+        pbar.close()
         experiment_results = evaluate(results, device)
         experiment_results['results'] = results
         if alpha is not None:

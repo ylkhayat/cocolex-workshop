@@ -26,7 +26,7 @@ instructed=0
 # Function to wait for an available GPU
 wait_for_gpu() {
     while true; do
-        gpu=$(./check_gpus.sh) # Call the external script to get an available GPU
+        gpu=$(./utils/check_gpus.sh) # Call the external script to get an available GPU
         if [[ -n $gpu ]]; then
             echo "$gpu"
             return
@@ -49,31 +49,30 @@ log_new_experiment() {
     experiment_name=$1
     current_extra_info=$2
     short_setup=$(echo "$setup" | awk -F'_' '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))}1' OFS='')
-    prefix="${BLUE}●${RESET} ${BOLD}${RED}[${experiment_name}]${RESET} ${YELLOW}${model}${RESET} ● ${GREEN}${short_setup}${RESET} ● ${PURPLE}${current_extra_info}${RESET} ● ${CYAN}GPU ${gpu}${RESET}"
+    upper_dataset=$(echo "$dataset" | tr '[:lower:]' '[:upper:]')
+    first_setup="$[$upper_dataset][$short_setup]"
+    prefix="${BLUE}●${RESET} ${BOLD}${RED}[${experiment_name}]${RESET} ${YELLOW}${model}${RESET} ● ${GREEN}${first_setup}${RESET} ● ${PURPLE}${current_extra_info}${RESET} ● ${CYAN}GPU ${gpu}${RESET}"
     echo -e "$prefix"
 }
 
-# Create a unique tmux session
 session_name="experiment_session"
 tmux new-session -d -s "$session_name" || tmux attach -t "$session_name"
 
 echo -e "${BOLD} [!]\t running mode '$run_mode'"
-# Main job submission loop
 for dataset in "${datasets[@]}"; do
     for instructed in "${instructions[@]}"; do
         for model in "${models[@]}"; do
             for setup in "${setups[@]}"; do
-                extra_info="[${dataset}]"
+                extra_info=""
                 if [ "$instructed" -eq 1 ]; then
-                    extra_info+="[instructed]"
+                    extra_info="[instructed]"
                 else
-                    extra_info+="[non-instructed]"
+                    extra_info="[non-instructed]"
                 fi
 
                 if [[ "$run_mode" == "rag" || "$run_mode" == "all" ]]; then
                     gpu=$(wait_for_gpu)
                     log_new_experiment "RAG" "$extra_info"
-                    # echo "Launching RAG experiment for $model with $setup on GPU $gpu in a new tmux window"
                     tmux new-window -t "$session_name" -n "rag_${setup}" \
                         "./run_experiments_rag.sh --model \"$model\" \
                                     --dataset \"$dataset\" \
@@ -81,7 +80,7 @@ for dataset in "${datasets[@]}"; do
                                     --device \"$gpu\" \
                                     --setup \"$setup\" \
                                     --split \"$split\" \
-                                    --use_instructions \"$instructed\"; read"
+                                    --use_instructions \"$instructed\"; sleep 5"
                     sleep 50
                 fi
 
@@ -98,7 +97,7 @@ for dataset in "${datasets[@]}"; do
                                                     --setup \"$setup\" \
                                                     --split \"$split\" \
                                                     --strategy \"$strategy\" \
-                                                    --use_instructions \"$instructed\"; read"
+                                                    --use_instructions \"$instructed\" && tmux kill-window"
                         sleep 50
                     done
                 fi
@@ -120,7 +119,7 @@ for dataset in "${datasets[@]}"; do
                                                             --setup \"$setup\" \
                                                             --split \"$split\" \
                                                             --use_instructions \"$instructed\" \
-                                                            --variant \"$knn_variant\"; read"
+                                                            --variant \"$knn_variant\" && tmux kill-window"
                             sleep 50
                         done
                     done
