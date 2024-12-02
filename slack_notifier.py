@@ -1,7 +1,7 @@
 import os
 import requests
 
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
 if not SLACK_WEBHOOK_URL:
     raise ValueError("SLACK_WEBHOOK_URL is not set in the environment variables")

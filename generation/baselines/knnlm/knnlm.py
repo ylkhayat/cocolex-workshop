@@ -63,7 +63,7 @@ class KNNLM:
                                     layer_index=-1):
         assert overlap >= 0.0 and overlap <= 1.0, "Overlap must be between [0, 1]"
         assert isinstance(context_texts, list), "Contexts must be a list of lists"
-        print(f"[!] constructing plus datastore from layer '{layer_index}'")
+        # print(f"[!] constructing plus datastore from layer '{layer_index}'")
         begin_time = time.process_time()
         batch_datastores = []
         for contexts in context_texts:
@@ -88,7 +88,7 @@ class KNNLM:
                 'values': np.array(values)
             })
         elapsed_time = time.process_time() - begin_time
-        print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
+        # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
     
@@ -97,7 +97,7 @@ class KNNLM:
     def construct_datastore_individually(self,
                                     context_texts: List[str],
                                     layer_index=-1):
-        print(f"[!] constructing datastore: {layer_index}")
+        # print(f"[!] constructing datastore: {layer_index}")
         begin_time = time.process_time()
         batch_datastores = []
         for text in context_texts:
@@ -116,7 +116,7 @@ class KNNLM:
                 'values': next_tokens[0].detach().cpu().numpy()
             })
         elapsed_time = time.process_time() - begin_time
-        print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
+        # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
 
@@ -256,9 +256,9 @@ class KNNLM:
         cur_len = 0
         batch_size = len(input_ids)
         previous_lambda = torch.zeros((batch_size, 1), device=self.device)
-        if strategy == 'entropy':
-            print(f"[!] initial lamba: {previous_lambda}")
-            print(f"[!] entropy strategy: {entropy_strategy}")        
+        # if strategy == 'entropy':
+            # print(f"[!] initial lamba: {previous_lambda}")
+            # print(f"[!] entropy strategy: {entropy_strategy}")        
         unfinished_sents = input_ids.new(batch_size).fill_(1)
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
         generated_tokens = [[] for _ in range(batch_size)] 
@@ -291,7 +291,7 @@ class KNNLM:
                     elif entropy_strategy == 'exp_norm':
                         normalizer = torch.log(torch.tensor(original_next_token_probs.size(-1), dtype=original_next_token_probs.dtype))
                         normalized_entropy = entropy / normalizer
-                        # lamba_squeezed = torch.exp(-normalized_entropy).to(original_dtype)
+                        # lamba = torch.exp(-normalized_entropy).to(original_dtype)
                         lamba = 1 - normalized_entropy
                     elif entropy_strategy == 'sig':
                         lamba = 1 / (1 + torch.exp(entropy - entropy_sigmoid_threshold))

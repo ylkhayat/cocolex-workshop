@@ -70,7 +70,10 @@ def should_run_experiment(args):
 
 
 def build_path(args):
-    args = vars(args)
+    try:
+        args = vars(args)
+    except:
+        pass
     if "split" not in args:
         split = "train"
     else: 
@@ -81,7 +84,7 @@ def build_path(args):
     top_k_passages = args['top_k_passages']
     setup = args['setup']
     
-    excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override"}
+    excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override", "device"}
     params = {k: v for k, v in args.items() if k not in excluded_keys}
     param_str = "_".join([f"{key[:1]}-{value}" for key, value in params.items()])
 
