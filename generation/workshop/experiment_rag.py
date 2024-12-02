@@ -7,7 +7,8 @@ from experiment_utils import (
     evaluate,
     print_args,
     reshape_and_save_experiment_results,
-    setup_dataset
+    setup_dataset,
+    should_run_experiment
     )
 from tqdm import tqdm
 from slack_notifier import send_slack_notification
@@ -35,6 +36,10 @@ method = 'rag'
 args.method = method
 print_args(args)
 
+if not should_run_experiment(args):
+    print("[!] experiment already exists, skipping...")
+    sys.exit(1)
+    
 config = {
     "dataset": dataset,
     "dataset_percentage": dataset_percentage,
@@ -54,7 +59,7 @@ try:
     start_index = 0
     for batch in tqdm(clerc_dataset.iter(batch_size=batch_size), desc="Processing batches", total=len(clerc_dataset) // batch_size):
         prefixes = batch['previous_text']
-        docids = batch['docid']
+        docids = batch['docid'] if "docid" in batch else batch["appno"]
         refs = batch['gold_text']
         context_prefixes = batch['context_prefix']
         contexts = batch['context']

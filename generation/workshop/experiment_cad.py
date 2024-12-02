@@ -8,7 +8,8 @@ from generation.workshop.experiment_utils import (
     evaluate,
     print_args,
     reshape_and_save_experiment_results,
-    setup_dataset
+    setup_dataset,
+    should_run_experiment
     )
 from slack_notifier import send_slack_notification
 from tqdm import tqdm
@@ -42,6 +43,10 @@ args.method = method
 args.only_count_valid = only_count_valid
 print_args(args)
 
+if not should_run_experiment(args):
+    print("[!] experiment already exists, skipping...")
+    sys.exit(0)
+
 device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
 
 safe_dataset_percentage = dataset_percentage * 10 if dataset_percentage < 1 else 1.0
@@ -69,7 +74,7 @@ def carry_experiment(alpha):
         for batch in clerc_dataset.iter(batch_size=batch_size):
             prefixes = batch['previous_text']
             refs = batch['gold_text']
-            docids = batch['docid']
+            docids = batch['docid'] if "docid" in batch else batch["appno"]
             prompts = batch['prompt']
             contexts = batch['context']
             context_prefixes = batch['context_prefix']
@@ -107,9 +112,8 @@ def carry_experiment(alpha):
                 new_object["gen"] = generated_text
                 results.append(new_object)
             pbar.update(len(valid_outputs))
-            if only_count_valid:
-                if sentences_to_go <= 0:
-                    break
+            if sentences_to_go <= 0:
+                break
         pbar.close()
         experiment_results = evaluate(results, device)
         experiment_results['results'] = results

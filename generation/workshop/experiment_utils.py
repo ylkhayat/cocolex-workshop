@@ -1,4 +1,5 @@
 print(f"[!] loading dependencies!")
+import copy
 from datasets import load_dataset
 from evaluate import load
 print(f"[!] loading evaluation!")
@@ -27,6 +28,7 @@ def build_args_parser(method):
     parser.add_argument("--dataset", type=str, default="clerc")
     parser.add_argument("--decoding_strategy", type=str, choices=['top_p', 'top_k', 'greedy'], default='greedy')
     parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--override", type=int, default=0)
     
     if method == 'rag':
         parser.add_argument("--repetition_penalty", type=float, default=1.5)
@@ -49,7 +51,45 @@ def build_args_parser(method):
     parser.add_argument("--variant", type=str, choices=['normal', 'context', 'plus', 'context_plus'], default="normal")
     args = parser.parse_args()
     args.use_instructions = args.use_instructions == 1
+    args.override = args.override == 1
     return args
+
+
+def should_run_experiment(args):
+    new_args = copy.deepcopy(args)
+    override = new_args.override
+    exists = False
+    for i in range(4):
+        new_args.device = i
+        results_output_path, meta_output_path = build_path(new_args)
+        if os.path.exists(results_output_path) and os.path.exists(meta_output_path):
+            print(f"[!] experiment already exists with device {i}, skipping...")
+            exists = True
+            break
+    return override or not exists
+
+
+def build_path(args):
+    args = vars(args)
+    if "split" not in args:
+        split = "train"
+    else: 
+        split = args['split']
+    model = args['model']
+    method = args['method']
+    dataset = args['dataset']
+    top_k_passages = args['top_k_passages']
+    setup = args['setup']
+    
+    excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override"}
+    params = {k: v for k, v in args.items() if k not in excluded_keys}
+    param_str = "_".join([f"{key[:1]}-{value}" for key, value in params.items()])
+
+    model_cleaned = model.replace("/", "_")
+    common_output_path = f"../basement/{dataset}/{setup}/{split}/{top_k_passages}/{model_cleaned}"
+    results_output_path = f"{common_output_path}/results/{method}__{param_str}.jsonl"
+    meta_output_path = f"{common_output_path}/meta/{method}__{param_str}.json"
+    return results_output_path, meta_output_path
 
 def print_args(args):
     args_dict = {key: value for key, value in vars(args).items()}
@@ -57,27 +97,13 @@ def print_args(args):
 
 
 def reshape_and_save_experiment_results(scores_results, args):
-    split = args["split"]
-    if "split" not in args:
-        split = "train"
-    model = args["model"]
-    method = args["method"]
-    dataset = args["dataset"]
     new_results = scores_results["results"]
-    top_k_passages = args["top_k_passages"]
-    setup = args["setup"]
-    oracle_top_k = f"{setup}_{top_k_passages}"
-    
     excluded_keys = {"split", "model", "method", "setup", "top_k_passages"}
     scores = {"bert_score", "rouge", "align_score", "unieval"}
     params = {k: v for k, v in args.items() if k not in excluded_keys}
     scores = {k: v for k, v in scores_results.items() if k in scores}
-    param_str = "_".join([f"{key[:1]}-{value}" for key, value in params.items()])
 
-    model_cleaned = model.replace("/", "_")
-    common_output_path = f"../basement/{dataset}/{split}/{model_cleaned}/{oracle_top_k}"
-    results_output_path = f"{common_output_path}/results/{method}__{param_str}.jsonl"
-    meta_output_path = f"{common_output_path}/meta/{method}__{param_str}.json"
+    results_output_path, meta_output_path = build_path(args)
     os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
     os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)
     try:
@@ -211,7 +237,7 @@ def add_experiment(data,
     client = gspread.authorize(creds)
     spreadsheet_url = "https://docs.google.com/spreadsheets/d/1bE5AbY1hrqlR-_v-ohLCgHA6hFvRCTpH4lrRPqXm9UU/edit?usp=sharing"
     sheet = client.open_by_url(spreadsheet_url)
-    worksheet = sheet.get_worksheet(2)
+    worksheet = sheet.get_worksheet(0)
     worksheet.append_row(new_row, value_input_option="USER_ENTERED")
     print("[!] added experiment metric!")
     

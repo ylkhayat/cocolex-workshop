@@ -4,11 +4,9 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import Tuple, Union, List, Literal, Optional
 import gc
-import matplotlib.pyplot as plt
 import numpy as np
 import time
 import torch
-import os
 import torch.nn.functional as F
 
 
@@ -272,11 +270,7 @@ class KNNLM:
         }
         entropies_history = [previous_lambda]
         lamba_history = [previous_lambda]
-        desc = "KNNLM'ing" if strategy == 'constant' else "KNNLM'ing with Lambda Entropy"
         with torch.no_grad():
-            pbar = tqdm(total=max_length, desc=desc, position=0)
-            if strategy == 'constant':
-                pbar.set_postfix({"Lambda": lamba})
             while cur_len < max_length:
                 model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 outputs = self.model(**model_inputs,
@@ -295,9 +289,10 @@ class KNNLM:
                     if entropy_strategy == 'exp':
                         lamba = torch.exp(-entropy).to(original_dtype)
                     elif entropy_strategy == 'exp_norm':
-                        max_entropy = torch.log(torch.tensor(original_next_token_probs.size(-1), dtype=original_next_token_probs.dtype))
-                        normalized_entropy = entropy / max_entropy
-                        lamba = torch.exp(-normalized_entropy).to(original_dtype) 
+                        normalizer = torch.log(torch.tensor(original_next_token_probs.size(-1), dtype=original_next_token_probs.dtype))
+                        normalized_entropy = entropy / normalizer
+                        # lamba_squeezed = torch.exp(-normalized_entropy).to(original_dtype)
+                        lamba = 1 - normalized_entropy
                     elif entropy_strategy == 'sig':
                         lamba = 1 / (1 + torch.exp(entropy - entropy_sigmoid_threshold))
                     lamba = lambda_smoothing_factor * lamba + (1 - lambda_smoothing_factor) * previous_lambda
@@ -305,7 +300,6 @@ class KNNLM:
                     lamba_history.append(lamba)
                     previous_lambda = lamba
                     
-                    # print(f"[!] lamba: {lamba}")
                     assert torch.all(lamba >= 0.0) and torch.all(lamba <= 1.0), "Lambda must be between [0, 1]"
                 next_token_probs = (1 - lamba) * knn_next_token_probs.to(original_dtype) + lamba * original_next_token_probs.to(original_dtype)
 
@@ -329,34 +323,11 @@ class KNNLM:
                         sent_lengths[i] = cur_len
                 if unfinished_sents.max() == 0:
                     break
-                pbar.update(1)
-        pbar.close()
-        
-        # plot_figure = None
-        # if strategy == 'entropy':
-        #     entropies_history = torch.cat(entropies_history, dim=-1).cpu().numpy()
-        #     lamba_history = torch.cat(lamba_history, dim=-1).cpu().numpy()
-        #     timesteps = np.arange(lamba_history.shape[1])
-        #     plt.figure(figsize=(8, 6))
-        #     for i, (batch_lambda, batch_entropies) in enumerate(zip(lamba_history, entropies_history)):
-        #         label_suffix = 'W Context' if i == 1 else 'W/O Context'
-        #         plt.plot(timesteps, batch_lambda, marker='o', linestyle='-', label=f'Batch {label_suffix} - Lambda {i+1}', linewidth=2, color=f'C{i}')
-        #         plt.plot(timesteps, batch_entropies, marker='x', linestyle='--', label=f'Batch {label_suffix} - Entropy {i+1}', linewidth=1, color=f'C{i}')
-        #     os.makedirs('plots', exist_ok=True)
-        #     plt.title(f"Entropy Function: {entropy_strategy}, Lambda Smoothing: {lambda_smoothing_factor}, Sigmoid Threshold: {entropy_sigmoid_threshold}")
-        #     plt.xlabel("Timestep")
-        #     plt.ylabel("Lambda Value")
-        #     plt.grid(True, linestyle='--', alpha=0.6)
-        #     plt.legend()
-        #     plot_figure = plt.gcf()
-        #     plt.close(plot_figure)
 
         gc.collect()
         torch.cuda.empty_cache()
 
-        # Return the generated tokens
         return generated_tokens
-        # return generated_tokens, plot_figure
 
 
 

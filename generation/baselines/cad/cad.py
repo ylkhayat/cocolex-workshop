@@ -227,7 +227,7 @@ class CAD:
 
         # Generate tokens
         with torch.no_grad():
-            pbar = tqdm(total=max_length, desc="CAD'ing" if method == 'cad' else "ADACAD'ing", position=0)
+            # pbar = tqdm(total=max_length, desc="CAD'ing" if method == 'cad' else "ADACAD'ing", position=0)
             while cur_len < max_length:
                 model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 outputs = self.model(**model_inputs,
@@ -248,7 +248,7 @@ class CAD:
                 if method == 'adacad':
                     alpha_tr = self.compute_jsd_per_batch(next_token_logits_with_contexts, next_token_logits)
                     alpha = torch.clamp(alpha_tr, min=0.0, max=1.0).unsqueeze(-1)
-                    pbar.set_postfix({"Alpha": alpha.mean().item()})
+                    # pbar.set_postfix({"Alpha": alpha.mean().item()})
                 # eos_token_logits = next_token_logits[:, self.tokenizer.eos_token_id]
 # 
                 next_token_logits = (1 + alpha) * next_token_logits_with_contexts - alpha * next_token_logits
@@ -318,8 +318,8 @@ class CAD:
 
                 if unfinished_sents.max() == 0:
                     break
-                pbar.update(1)
-            pbar.close()
+            #     pbar.update(1)
+            # pbar.close()
 
         # Return the generated tokens
         return generated_tokens

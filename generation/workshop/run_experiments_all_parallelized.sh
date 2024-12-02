@@ -17,7 +17,7 @@ instructions=(0 1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
 knnlm_variants=(normal context plus context_plus)
-datasets=(clerc)
+datasets=(clerc echr)
 
 data_percentage=0.005
 instructed=0
@@ -50,7 +50,7 @@ log_new_experiment() {
     current_extra_info=$2
     short_setup=$(echo "$setup" | awk -F'_' '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))}1' OFS='')
     upper_dataset=$(echo "$dataset" | tr '[:lower:]' '[:upper:]')
-    first_setup="$[$upper_dataset][$short_setup]"
+    first_setup="[$upper_dataset][$short_setup]"
     prefix="${BLUE}●${RESET} ${BOLD}${RED}[${experiment_name}]${RESET} ${YELLOW}${model}${RESET} ● ${GREEN}${first_setup}${RESET} ● ${PURPLE}${current_extra_info}${RESET} ● ${CYAN}GPU ${gpu}${RESET}"
     echo -e "$prefix"
 }
@@ -80,7 +80,8 @@ for dataset in "${datasets[@]}"; do
                                     --device \"$gpu\" \
                                     --setup \"$setup\" \
                                     --split \"$split\" \
-                                    --use_instructions \"$instructed\"; sleep 5"
+                                    --use_instructions \"$instructed\"; \
+                        if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
                     sleep 50
                 fi
 
@@ -97,7 +98,7 @@ for dataset in "${datasets[@]}"; do
                                                     --setup \"$setup\" \
                                                     --split \"$split\" \
                                                     --strategy \"$strategy\" \
-                                                    --use_instructions \"$instructed\" && tmux kill-window"
+                                                    --use_instructions \"$instructed\"; read"
                         sleep 50
                     done
                 fi
@@ -119,7 +120,7 @@ for dataset in "${datasets[@]}"; do
                                                             --setup \"$setup\" \
                                                             --split \"$split\" \
                                                             --use_instructions \"$instructed\" \
-                                                            --variant \"$knn_variant\" && tmux kill-window"
+                                                            --variant \"$knn_variant\"; read"
                             sleep 50
                         done
                     done
