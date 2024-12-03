@@ -12,15 +12,13 @@ split=$1
 run_mode=${2:-all}
 
 models=(mistralai/Mistral-7B-Instruct-v0.3)
-setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
+setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
 instructions=(0 1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
 knnlm_variants=(normal context plus context_plus)
-datasets=(clerc echr)
-
-data_percentage=0.005
-instructed=0
+datasets=(clerc)
+data_percentage=0.1
 
 
 # Function to wait for an available GPU
@@ -82,7 +80,7 @@ for dataset in "${datasets[@]}"; do
                                     --split \"$split\" \
                                     --use_instructions \"$instructed\"; \
                         if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                    sleep 50
+                    sleep 30
                 fi
 
                 if [[ "$run_mode" == "cad" || "$run_mode" == "all" ]]; then
@@ -98,8 +96,9 @@ for dataset in "${datasets[@]}"; do
                                                     --setup \"$setup\" \
                                                     --split \"$split\" \
                                                     --strategy \"$strategy\" \
-                                                    --use_instructions \"$instructed\"; read"
-                        sleep 50
+                                                    --use_instructions \"$instructed\"; \
+                            if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
+                        sleep 30
                     done
                 fi
 
@@ -120,8 +119,9 @@ for dataset in "${datasets[@]}"; do
                                                             --setup \"$setup\" \
                                                             --split \"$split\" \
                                                             --use_instructions \"$instructed\" \
-                                                            --variant \"$knn_variant\"; read"
-                            sleep 50
+                                                            --variant \"$knn_variant\"; \
+                                if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
+                            sleep 30
                         done
                     done
                 fi

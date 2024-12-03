@@ -1,15 +1,17 @@
 import sys
+
+import ipdb
 if '/srv/elkhyo/lexquo' not in sys.path:
     sys.path.insert(0, '/srv/elkhyo/lexquo')
-from experiment_utils import (
-    add_experiment,
-    build_args_parser,
-    evaluate,
-    print_args,
-    reshape_and_save_experiment_results,
-    setup_dataset,
+from generation.workshop.dataloader import ModelInputPreprocessor
+from generation.workshop.experiment_utils import (
+    add_experiment, 
+    build_args_parser, 
+    evaluate, print_args, 
+    reshape_and_save_experiment_results, 
     should_run_experiment
     )
+
 from tqdm import tqdm
 from slack_notifier import send_slack_notification
 from generation.baselines.rag.rag import RAG
@@ -38,31 +40,34 @@ print_args(args)
 
 if not should_run_experiment(args):
     print("[!] experiment already exists, skipping...")
-    sys.exit(1)
+    sys.exit(0)
     
+device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
+rag_model = RAG(model_name=model_name, device=device.index)
 config = {
-    "dataset": dataset,
     "dataset_percentage": dataset_percentage,
+    "dataset": dataset,
+    "method": method,
     "setup": setup,
     "split": split,
     "top_k_passages": top_k_passages,
-    "use_instructions": use_instructions
+    "max_tokens": rag_model.model.config.max_position_embeddings,
+    "use_instructions": use_instructions,
 }
-
-device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
-rag_model = RAG(model_name=model_name, device=device.index)
-clerc_dataset = setup_dataset(config,
-                              tokenizer=rag_model.tokenizer)
-
+preprocessor = ModelInputPreprocessor(tokenizer=rag_model.tokenizer)
+work_dataset = preprocessor.process_dataset(config)
 results = []
 try:
     start_index = 0
-    for batch in tqdm(clerc_dataset.iter(batch_size=batch_size), desc="Processing batches", total=len(clerc_dataset) // batch_size):
+    is_truncated_global = False
+    for batch in tqdm(work_dataset.iter(batch_size=batch_size), desc="Batches", total=len(work_dataset) // batch_size):
         prefixes = batch['previous_text']
-        docids = batch['docid'] if "docid" in batch else batch["appno"]
+        docids = batch['docid']
         refs = batch['gold_text']
         context_prefixes = batch['context_prefix']
         contexts = batch['context']
+        if any(batch['is_truncated']):
+            is_truncated_global = True
         prompts = batch['prompt']
         prompts = [f"{context_prefix}\n\n{context}{rag_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
         outputs = rag_model.generate(
@@ -84,6 +89,7 @@ try:
             new_object["meta"]['prompt'] = prompt
             new_object["gen"] = generated_text
             results.append(new_object)
+    args.is_truncated = is_truncated_global
     experiment_results = evaluate(results, device)
     experiment_results['results'] = results
     results_output_path, meta_output_path = reshape_and_save_experiment_results(experiment_results, vars(args))
@@ -93,4 +99,4 @@ try:
 except Exception as e:
     print(f"[!] Error: {e}")
     send_slack_notification(f"[x] Experiment failed!")
-    raise e
+    sys.exit(1)

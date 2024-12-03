@@ -82,7 +82,7 @@ class KNNLM:
                     for j in range(hidden_states.shape[0]):
                         keys.extend(hidden_states[j])
                         values.extend(next_tokens[j])
-            print(f"[!] collected keys: {len(keys)}")
+            # print(f"[!] collected keys: {len(keys)}")
             batch_datastores.append({
                 'keys': np.array(keys),
                 'values': np.array(values)
@@ -291,8 +291,7 @@ class KNNLM:
                     elif entropy_strategy == 'exp_norm':
                         normalizer = torch.log(torch.tensor(original_next_token_probs.size(-1), dtype=original_next_token_probs.dtype))
                         normalized_entropy = entropy / normalizer
-                        # lamba = torch.exp(-normalized_entropy).to(original_dtype)
-                        lamba = 1 - normalized_entropy
+                        lamba = torch.exp(-normalized_entropy).to(original_dtype)
                     elif entropy_strategy == 'sig':
                         lamba = 1 / (1 + torch.exp(entropy - entropy_sigmoid_threshold))
                     lamba = lambda_smoothing_factor * lamba + (1 - lambda_smoothing_factor) * previous_lambda

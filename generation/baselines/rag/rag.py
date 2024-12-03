@@ -35,13 +35,14 @@ class RAG:
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model.generation_config.pad_token_id = self.tokenizer.eos_token_id
-
+        
         # if self.tokenizer.pad_token is None:
         #     special_tokens_dict = {'pad_token': '[PAD]'}
         #     self.tokenizer.add_special_tokens(special_tokens_dict)
         #     self.model.resize_token_embeddings(len(self.tokenizer))
         #     self.model.generation_config.pad_token_id = self.tokenizer.pad_token_id
         #     print(f"[!] added [PAD] token to the tokenizer {self.tokenizer.pad_token_id}")
+
         
     def _top_p_sampling(self, 
                         logits: torch.Tensor, 

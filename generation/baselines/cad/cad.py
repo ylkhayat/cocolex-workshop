@@ -37,6 +37,7 @@ class CAD:
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.model.generation_config.pad_token_id = self.tokenizer.eos_token_id
 
+        # only for batch processing
         # if self.tokenizer.pad_token is None:
         #     special_tokens_dict = {'pad_token': '[PAD]'}
         #     self.tokenizer.add_special_tokens(special_tokens_dict)
@@ -142,19 +143,10 @@ class CAD:
         return result.to(original_dtype)
     
     def compute_jsd_per_batch(self, p, q):
-        """
-        Compute JSD for each batch in the input tensors.
-        Args:
-            p (torch.Tensor): Tensor of shape (batch_size, ..., num_classes)
-            q (torch.Tensor): Tensor of shape (batch_size, ..., num_classes)
-
-        Returns:
-            List[torch.Tensor]: List of JSD values for each batch.
-        """
         batch_size = p.size(0)
         jsd_values = []
         for i in range(batch_size):
-            jsd = self.get_jsd(p[i], q[i])  # Compute JSD for each batch
+            jsd = self.get_jsd(p[i], q[i])
             jsd_values.append(jsd)
         return torch.tensor(jsd_values, device=p.device, dtype=p.dtype)
 

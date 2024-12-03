@@ -1,8 +1,17 @@
 import sys
+import traceback
 if '/srv/elkhyo/lexquo' not in sys.path:
     sys.path.insert(0, '/srv/elkhyo/lexquo')
+from generation.workshop.dataloader import ModelInputPreprocessor
+from generation.workshop.experiment_utils import (
+    add_experiment,
+    build_args_parser,
+    evaluate,
+    print_args,
+    reshape_and_save_experiment_results,
+    should_run_experiment
+    )
 from generation.baselines.knnlm.knnlm import KNNLM
-from generation.workshop.experiment_utils import add_experiment, build_args_parser, evaluate, print_args, reshape_and_save_experiment_results, setup_dataset, should_run_experiment
 from slack_notifier import send_slack_notification
 from tqdm import tqdm
 import torch
@@ -43,23 +52,23 @@ print_args(args)
 
 if not should_run_experiment(args):
     print("[!] experiment already exists, skipping...")
-    sys.exit(1)
+    sys.exit(0)
 
 try:
     device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
+    knnlm_model = KNNLM(model_name=model_name, device=device.index)
     config = {
-        "dataset": dataset,
         "dataset_percentage": dataset_percentage,
+        "dataset": dataset,
+        "method": method,
         "setup": setup,
         "split": split,
         "top_k_passages": top_k_passages,
-        "use_instructions": use_instructions
+        "max_tokens": knnlm_model.model.config.max_position_embeddings,
+        "use_instructions": use_instructions,
     }
-    knnlm_model = KNNLM(model_name=model_name, device=device.index)
-    clerc_dataset = setup_dataset(config,
-                                tokenizer=knnlm_model.tokenizer)
-
-
+    preprocessor = ModelInputPreprocessor(tokenizer=knnlm_model.tokenizer)
+    work_dataset = preprocessor.process_dataset(config)
     def carry_experiment(lamba,
                         strategy,
                         k,
@@ -67,17 +76,20 @@ try:
         results = []
         try:
             start_index = 0
-            for batch in tqdm(clerc_dataset.iter(batch_size=batch_size), desc="Processing batches", total=len(clerc_dataset) // batch_size):
+            is_truncated_global = False
+            for batch in tqdm(work_dataset.iter(batch_size=batch_size), desc="Batches", total=len(work_dataset) // batch_size):
                 prefixes = batch['previous_text']
-                docids = batch['docid'] if "docid" in batch else batch["appno"]
+                docids = batch['docid']
                 refs = batch['gold_text']
                 contexts = batch['context']
+                if any(batch['is_truncated']):
+                    is_truncated_global = True
                 context_prefixes = batch['context_prefix']
                 prompts = batch['prompt']
                 if "context" in variant:
                     prompts = [f"{context_prefix}\n\n{context}{knnlm_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
                 if "plus" in variant:
-                    contexts = [meta['oracle_documents'] for meta in batch['meta']]
+                    contexts = batch['meta.oracle_documents']
                 outputs = knnlm_model.generate(
                     prompts=prompts,
                     contexts=contexts,
@@ -107,6 +119,7 @@ try:
                     new_object["meta"]['context'] = context
                     new_object["gen"] = generated_text
                     results.append(new_object)
+            args.is_truncated = is_truncated_global
             experiment_results = evaluate(results, device)
             experiment_results['knn_k'] = k
             experiment_results['lamba'] = lamba
@@ -129,4 +142,6 @@ try:
         for layer_index in layers:
             carry_experiment(None, "entropy", 10, layer_index)
 except Exception as e:
+    print(f"[!] Error: {e}")
+    traceback.print_exc()
     sys.exit(1)
