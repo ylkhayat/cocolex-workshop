@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 class KNNLM:
     def __init__(self, model_name: str, device: Union[int,str] = 0):
-        print(f"[!] optimized KNNLM is initialized with model: {model_name}")
+        # print(f"[!] optimized KNNLM is initialized with model: {model_name}")
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
         self.model = torch.compile(self.model)
@@ -50,7 +50,8 @@ class KNNLM:
                                    max_length: int = 512,
                                    overlap: float = 0.5) -> List[Tuple[torch.Tensor, int]]:
         processed_chunks = []
-        for context in tqdm(contexts, desc="Preparing contexts"):
+        # for context in tqdm(contexts, desc="Preparing contexts"):
+        for context in contexts:
             context_text = context[1]
             tokenized_contexts = self.tokenizer(context_text, return_tensors="pt", truncation=False)
             chunks = self.chunk_tokens(tokenized_contexts["input_ids"][0], max_length, overlap)
@@ -70,7 +71,7 @@ class KNNLM:
             keys = []
             values = []
             batch_size = 8
-            for batch_contexts in tqdm(chunked(contexts, batch_size), desc="Processing contexts"):
+            for batch_contexts in chunked(contexts, batch_size):
                 splits = self.prepare_contexts_for_datastore(batch_contexts)
                 for split, pick_from in splits:
                     split = split.unsqueeze(0).to(self.device)

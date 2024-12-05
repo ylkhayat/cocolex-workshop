@@ -2,7 +2,9 @@ import copy
 import ipdb
 from transformers import PreTrainedTokenizerBase
 from datasets import load_dataset
+import os
 
+num_proc = os.cpu_count()
 
 class TextSection:
     def __init__(self, name, text, priority, tokenizer):
@@ -178,7 +180,7 @@ class ModelInputPreprocessor:
                                                   max_tokens=self.max_tokens,
                                                   use_instructions=self.use_instructions),
             batched=False,
-            num_proc=10
+            num_proc=num_proc
         )
         processed_dataset = processed_dataset.flatten()
         assert "meta.oracle_documents" in processed_dataset.column_names

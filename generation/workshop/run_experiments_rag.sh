@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")" || exit
 
-. ./utils/dynamic_input_handler.sh --required dataset,setup,split,device --method rag "$@"
+. ./utils/dynamic_input_handler.sh --required dataset,setup,split --method rag "$@"
 
 if [[ $? -ne 0 ]]; then
     exit 1

@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")" || exit
 
-. ./utils/dynamic_input_handler.sh --required dataset,setup,split,variant,device,strategy --method knnlm "$@"
+. ./utils/dynamic_input_handler.sh --required dataset,setup,split,variant,strategy --method knnlm "$@"
 
 if [[ $? -ne 0 ]]; then
     exit 1

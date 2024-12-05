@@ -1,6 +1,7 @@
 print(f"[!] loading dependencies!")
 import copy
 from evaluate import load
+from sqlalchemy import all_
 print(f"[!] loading evaluation!")
 from generation.evaluation.align_score.src.alignscore import AlignScore
 from generation.evaluation.unieval.metric.evaluator import get_evaluator
@@ -23,6 +24,7 @@ if not os.path.exists(service_account_json_file):
 
 def build_args_parser(method):
     parser = argparse.ArgumentParser()
+    parser.add_argument('--check_only',type=int, default=0, help='Only check if the experiment needs to run.')
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--dataset_percentage", type=float, default=0.005)
     parser.add_argument("--dataset", type=str, default="clerc")
@@ -51,26 +53,47 @@ def build_args_parser(method):
     return args
 
 
-def should_run_experiment(args):
+def load_experiment(args):
     new_args = copy.deepcopy(args)
-    override = new_args.override
     exists = False
-    if 'cad' in args.method:
-        alphas = [None] if args.strategy == 'adacad' else args.alphas
-        for i in alphas:
-            new_args.alpha = i
-            results_output_path, meta_output_path = build_path(new_args)
-            if os.path.exists(results_output_path) and os.path.exists(meta_output_path):
-                print(f"[!] experiment already exists for alpha {i}, skipping...")
-                exists = True
-                break
-    else:
-        results_output_path, meta_output_path = build_path(new_args)
-        if os.path.exists(os.path.abspath(results_output_path)) and os.path.exists(os.path.abspath(meta_output_path)):
-            exists = True
-    return override or not exists
+    results = []
+    results_output_path, meta_output_path, legacy_results_output_path = build_path(new_args)
+    print(f"[!] loading experiment from {results_output_path}")
+    has_results = os.path.exists(results_output_path)
+    has_legacy_results = os.path.exists(legacy_results_output_path)
+    has_meta = os.path.exists(meta_output_path)
+    duplicates = 0
+    existing_docids = set()
+    if has_legacy_results:
+        print("[!] found legacy results, accumulating...")
+        with open(legacy_results_output_path, "r") as f:
+            for line in f:
+                record = json.loads(line)
+                if record['meta']['docid'] not in existing_docids:
+                    results.append(record)
+                    existing_docids.add(record['meta']['docid'])
+                else:
+                    duplicates += 1
+    if has_results:
+        exists = True
+        duplicates = 0
+        with open(results_output_path, "r") as f:
+            for line in f:
+                record = json.loads(line)
+                if record['meta']['docid'] not in existing_docids:
+                    results.append(record)
+                    existing_docids.add(record['meta']['docid'])
+                else:
+                    duplicates += 1
+    print(f"[!] found {len(results)} results, and pruned {duplicates} duplicates")
+    print(f"[!] writing new results to {results_output_path}")
+    write_results(results, results_output_path)
+    return exists, has_meta, results
 
-excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override", "device", "only_count_valid"}
+common_excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override", "device", "only_count_valid", "check_only"}
+excluded_keys  = common_excluded_keys | {"decoding_strategy"}
+results_path_excluded_keys = common_excluded_keys | {"is_truncated" , "dataset_percentage"}
+meta_path_excluded_keys = common_excluded_keys | {"is_truncated"}
 
 def build_path(args):
     try:
@@ -86,33 +109,35 @@ def build_path(args):
     dataset = args['dataset']
     top_k_passages = args['top_k_passages']
     setup = args['setup']
-    params = {k: v for k, v in args.items() if k not in excluded_keys}
-    param_str = "_".join([f"{key[:2]}-{value}" for key, value in params.items()])
+    results_params = {k: v for k, v in args.items() if k not in results_path_excluded_keys}
+    results_params_str = "_".join([f"{key[:2]}-{value}" for key, value in results_params.items()])
+    meta_params = {k: v for k, v in args.items() if k not in meta_path_excluded_keys}
+    meta_params_str = "_".join([f"{key[:2]}-{value}" for key, value in meta_params.items()])
 
     model_cleaned = model.replace("/", "_")
     common_output_path = f"../basement/{dataset}/{split}/{setup}/{top_k_passages}/{model_cleaned}"
-    results_output_path = f"{common_output_path}/results/{method}__{param_str}.jsonl"
-    meta_output_path = f"{common_output_path}/meta/{method}__{param_str}.json"
-    return results_output_path, meta_output_path
+    results_output_path = f"{common_output_path}/generations/{method}__{results_params_str}.jsonl"
+    legacy_results_output_path = f"{common_output_path}/results/{method}__{meta_params_str}.jsonl"
+    meta_output_path = f"{common_output_path}/meta/{method}__{meta_params_str}.json"
+    os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
+    os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)
+    return results_output_path, meta_output_path, legacy_results_output_path
 
 def print_args(args):
     args_dict = {key: value for key, value in vars(args).items()}
     print(tabulate(args_dict.items(), headers=["Argument", "Value"], tablefmt="fancy_grid"))
 
 
-def reshape_and_save_experiment_results(scores_results, args):
-    new_results = scores_results["results"]
+def write_results(results, results_output_path):
+    with open(results_output_path, "w") as f:
+        for item in results:
+            f.write(json.dumps(item) + "\n")
+
+def save_metadata(scores_results, meta_output_path, args):
     scores = {"bert_score", "rouge", "align_score", "unieval"}
     params = {k: v for k, v in args.items() if k not in excluded_keys}
     scores = {k: v for k, v in scores_results.items() if k in scores}
-
-    results_output_path, meta_output_path = build_path(args)
-    os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
-    os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)
     try:
-        with open(results_output_path, "w") as f:
-            for item in new_results:
-                f.write(json.dumps(item) + "\n")
         with open(meta_output_path, "w") as f:
             data_without_results = args.copy()
             data_without_results['params'] = params
@@ -122,16 +147,26 @@ def reshape_and_save_experiment_results(scores_results, args):
             f.write(json.dumps(data_without_results, indent=4))
     except Exception as e:
         print(f"[!] error saving results: {e}")
-    return results_output_path, meta_output_path
 
 def average_scores(score_list):
     rounded_score = round(sum(score_list) / len(score_list) * 100, 2)
     return rounded_score
 
 
-
-
-def evaluate(results, device, evaluation_mode="nli_sp"):
+def get_resources(results, reference_dataset):
+    docids = [result['meta']['docid'] for result in results]
+    reference_dataset = reference_dataset.filter(lambda record: record['docid'] in docids)
+    return reference_dataset.to_dict()
+    
+    
+def evaluate(results, device, reference_dataset, method, evaluation_mode="nli_sp"):
+    print(f"[!] evaluation for method: {method}")
+    resources = get_resources(results, reference_dataset)
+    all_docids = [result['meta']['docid'] for result in results]
+    assert all_docids == resources['docid'], "The order of docids does not match between results and reference dataset"
+    # drop the id and merge all bigger documents
+    oracle_documents = ['\n'.join([document[1] for document in resource]) for resource in resources['meta.oracle_documents']]
+    top_k_passages = ['\n'.join([document for document in resource]) for resource in resources['meta.top_k_passages']]
     predictions = [result['gen'] for result in results]
     references = [result['meta']['gold_text'] for result in results]
     prefixes = [result['meta']['previous_text'] for result in results]
@@ -145,7 +180,7 @@ def evaluate(results, device, evaluation_mode="nli_sp"):
     rouge_scores = rouge.compute(predictions=predictions, references=references)
 
     task = 'summarization'
-    unieval_evaluator = get_evaluator(task)
+    unieval_evaluator = get_evaluator(task, device=device)
     data = convert_to_json(output_list=predictions, src_list=prefixes, ref_list=references)
     eval_scores = unieval_evaluator.evaluate(data)
     sum_scores = {key: 0 for key in eval_scores[0].keys()}
@@ -166,13 +201,20 @@ def evaluate(results, device, evaluation_mode="nli_sp"):
     evaluation_mode = evaluation_mode
     print(f"[!] using alignscore model evaluation mode: {evaluation_mode}")
     alignscorer = AlignScore(model='roberta-large',
-                             batch_size=32,
+                             batch_size=64,
                              device=device,
                              ckpt_path=align_score_model_to_use,
                              evaluation_mode=evaluation_mode,
                              sent_tokenize=sent_tokenize)
-    alignscores = alignscorer.score(contexts=references, claims=predictions)
-    align_scores = average_scores(alignscores)
+    correctness = alignscorer.score(contexts=references, claims=predictions)
+    correctness_scores = average_scores(correctness)
+    if 'plus' in method:
+        print("[!] using oracle documents for faithfulness")
+        faithfulness = alignscorer.score(contexts=oracle_documents, claims=predictions)
+    else:
+        print("[!] using top k passages for faithfulness")
+        faithfulness = alignscorer.score(contexts=top_k_passages, claims=predictions)
+    faithfulness_scores = average_scores(faithfulness)
     
     return {
         "bert_score": {
@@ -182,11 +224,13 @@ def evaluate(results, device, evaluation_mode="nli_sp"):
         },
         "rouge": rouge_scores,
         "unieval": unieval_mean_scores,
-        "align_score": align_scores
+        "align_score": {
+            "correctness": correctness_scores,
+            "faithfulness": faithfulness_scores
+        }
     }
 
-def add_experiment(data,
-                   args):
+def add_experiment(data, args):
     sheet_columns_args = [
         "model",
         "method",
@@ -198,7 +242,8 @@ def add_experiment(data,
         "split"
     ]
     sheet_columns_data = [
-        "align_score", 
+        "align_score.correctness", 
+        "align_score.faithfulness", 
         "unieval.coherence", 
         "unieval.consistency",
         "unieval.fluency",

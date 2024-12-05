@@ -16,3 +16,6 @@ basement
 thesis_service_account.json
 .env
 *.jsonl
+
+
+data
