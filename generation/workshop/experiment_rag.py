@@ -40,14 +40,13 @@ method = 'rag'
 args.method = method
 print_args(args)
 
-results = []
-exists, finished, results = load_experiment(args)
+all_results = []
+exists, finished, all_results = load_experiment(args)
 if not args.override and finished:
     print("[!] experiment already exists, skipping...")
     sys.exit(1 if args.check_only else 0)
 if args.check_only:
     sys.exit(0)
-truncate_results_found = len(results)
 
 device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
 rag_model = RAG(model_name=model_name, device=device.index)
@@ -65,15 +64,15 @@ preprocessor = ModelInputPreprocessor(tokenizer=rag_model.tokenizer)
 work_dataset = preprocessor.process_dataset(config)
 
 needed_docids = work_dataset['docid'] # needed finished + needed not finished
-results = [result for result in results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
-computed_docids = [result['meta']['docid'] for result in results] # needed finished
-initial_length = len(results)
-print(f"[!] filtered {initial_length - len(results)} records")
+current_results = [result for result in all_results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
+computed_docids = [result['meta']['docid'] for result in current_results] # needed finished
+print(f"[!] used {len(all_results) - len(current_results)} relevent records")
 try:
     results_output_path, meta_output_path, _ = build_path(args)
     start_index = 0
     is_truncated_global = False
     filted_work_dataset = work_dataset.filter(lambda record: record['docid'] not in computed_docids) # needed not finished
+    record_counter = 0
     for batch in tqdm(filted_work_dataset.iter(batch_size=batch_size), desc="Batches", total=len(filted_work_dataset) // batch_size):
         if any(batch['is_truncated']):
             is_truncated_global = True
@@ -103,11 +102,15 @@ try:
             new_object["meta"]['previous_text'] = prev_text
             new_object["meta"]['prompt'] = prompt
             new_object["gen"] = generated_text
-            results.append(new_object)
-        write_results(results, results_output_path)
+            current_results.append(new_object)
+            all_results.append(new_object)
+            record_counter += 1
+        if record_counter % 10 == 0:
+            write_results(all_results, results_output_path)
+    write_results(all_results, results_output_path)
     rag_model.model.to(torch.device('cpu'))
     args.is_truncated = is_truncated_global
-    experiment_results = evaluate(results, device, work_dataset, args.method)
+    experiment_results = evaluate(current_results, device, work_dataset, args.method)
     start_index += batch_size
     current_args = vars(args)
     save_metadata(experiment_results, meta_output_path, current_args)

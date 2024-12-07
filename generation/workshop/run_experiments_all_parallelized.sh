@@ -18,14 +18,16 @@ run_mode=${2:-all}
 variant_mode=${3:-all}
 
 models=(mistralai/Mistral-7B-Instruct-v0.3)
-setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
-instructions=(0 1)
+# setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
+setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents)
+instructions=(1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
-knnlm_variants=(normal context plus context_plus)
+# knnlm_variants=(normal context plus context_plus)
+knnlm_variants=(context context_adacad context_plus context_adacad_plus)
 datasets=(clerc)
-dataset_percentage=1.0
-
+# dataset_percentage=1.0
+dataset_percentage=0.01
 
 # Function to wait for an available GPU
 wait_for_gpu() {
@@ -117,7 +119,7 @@ for dataset in "${datasets[@]}"; do
                         tmux new-window -t "$session_name" -n "rag_${setup}" \
                             "./run_experiments_rag.sh $python_args --device $gpu; \
                             if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                        sleep 18
+                        sleep 27
                     fi
                 fi
 
@@ -138,7 +140,7 @@ for dataset in "${datasets[@]}"; do
                             tmux new-window -t "$session_name" -n "cad_${setup}_${strategy}" \
                                 "./run_experiments_cad.sh $python_args --device $gpu; \
                                 if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                            sleep 18
+                            sleep 27
                         fi
                     done
                 fi
@@ -153,6 +155,9 @@ for dataset in "${datasets[@]}"; do
                         #     knnlm_variants=($variant_mode)
                         # fi
                         for knn_variant in "${knnlm_variants[@]}"; do
+                            if [[ "$knn_method" == "constant" && "$knn_variant" == "context_plus" ]]; then
+                                continue
+                            fi
                             python_args="--model \"$model\" \
                                         --dataset \"$dataset\" \
                                         --dataset_percentage $dataset_percentage \
@@ -169,7 +174,7 @@ for dataset in "${datasets[@]}"; do
                                 tmux new-window -t "$session_name" -n "knn_${setup}_${knn_method}_${knn_variant}" \
                                     "./run_experiments_knnlm.sh $python_args --device $gpu; \
                                     if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                                sleep 18
+                                sleep 27
                             fi
                         done
                     done

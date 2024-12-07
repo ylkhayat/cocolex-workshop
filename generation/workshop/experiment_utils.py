@@ -36,7 +36,7 @@ def build_args_parser(method):
     if 'knnlm' in method:
         parser.add_argument("--entropy_sigmoid_threshold", type=float, default=0.5)
         parser.add_argument("--entropy_strategy", type=str, choices=['exp', 'exp_norm', 'sig'], default='exp_norm')
-        parser.add_argument("--lambda_smoothing_factor", type=float, default=0.3)
+        parser.add_argument("--lambda_smoothing_factor", type=float, default=0.5)
     
     parser.add_argument("--max_new_tokens", type=int, default=200)
     parser.add_argument("--method", type=str)
@@ -46,7 +46,7 @@ def build_args_parser(method):
     parser.add_argument("--strategy", type=str, choices=['constant', 'entropy', 'adacad'], default='constant')
     parser.add_argument("--top_k_passages", type=int, default=3)
     parser.add_argument("--use_instructions", type=int, default=0)
-    parser.add_argument("--variant", type=str, choices=['normal', 'context', 'plus', 'context_plus'], default="normal")
+    parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
     args = parser.parse_args()
     args.use_instructions = args.use_instructions == 1
     args.override = args.override == 1
@@ -159,7 +159,7 @@ def get_resources(results, reference_dataset):
     return reference_dataset.to_dict()
     
     
-def evaluate(results, device, reference_dataset, method, evaluation_mode="nli_sp"):
+def evaluate(results, device, reference_dataset, method, evaluation_mode="nli"):
     print(f"[!] evaluation for method: {method}")
     resources = get_resources(results, reference_dataset)
     all_docids = [result['meta']['docid'] for result in results]
@@ -206,15 +206,17 @@ def evaluate(results, device, reference_dataset, method, evaluation_mode="nli_sp
                              ckpt_path=align_score_model_to_use,
                              evaluation_mode=evaluation_mode,
                              sent_tokenize=sent_tokenize)
+    print("[!] using generated text for correctness")
     correctness = alignscorer.score(contexts=references, claims=predictions)
     correctness_scores = average_scores(correctness)
-    if 'plus' in method:
-        print("[!] using oracle documents for faithfulness")
-        faithfulness = alignscorer.score(contexts=oracle_documents, claims=predictions)
-    else:
-        print("[!] using top k passages for faithfulness")
-        faithfulness = alignscorer.score(contexts=top_k_passages, claims=predictions)
-    faithfulness_scores = average_scores(faithfulness)
+    # if 'plus' in method:
+    print("[!] using oracle documents for faithfulness")
+    faithfulness_documents = alignscorer.score(contexts=oracle_documents, claims=predictions)
+    # else:
+    print("[!] using top k passages for faithfulness")
+    faithfulness_passages = alignscorer.score(contexts=top_k_passages, claims=predictions)
+    faithfulness_documents_scores = average_scores(faithfulness_documents)
+    faithfulness_passages_scores = average_scores(faithfulness_passages)
     
     return {
         "bert_score": {
@@ -226,7 +228,10 @@ def evaluate(results, device, reference_dataset, method, evaluation_mode="nli_sp
         "unieval": unieval_mean_scores,
         "align_score": {
             "correctness": correctness_scores,
-            "faithfulness": faithfulness_scores
+            "faithfulness": {
+                "documents": faithfulness_documents_scores,
+                "passages": faithfulness_passages_scores
+            }
         }
     }
 
@@ -243,7 +248,8 @@ def add_experiment(data, args):
     ]
     sheet_columns_data = [
         "align_score.correctness", 
-        "align_score.faithfulness", 
+        "align_score.faithfulness.passages", 
+        "align_score.faithfulness.documents", 
         "unieval.coherence", 
         "unieval.consistency",
         "unieval.fluency",

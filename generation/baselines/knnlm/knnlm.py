@@ -9,6 +9,8 @@ import time
 import torch
 import torch.nn.functional as F
 
+from generation.baselines.cad.cad import CAD
+
 
 class KNNLM:
     def __init__(self, model_name: str, device: Union[int,str] = 0):
@@ -45,16 +47,16 @@ class KNNLM:
             chunks.append(splits)
         return chunks
 
-    def prepare_contexts_for_datastore(self,
-                                   contexts: List[List[str]],
+    def prepare_references_for_datastore(self,
+                                   references: List[List[str]],
                                    max_length: int = 512,
                                    overlap: float = 0.5) -> List[Tuple[torch.Tensor, int]]:
         processed_chunks = []
-        # for context in tqdm(contexts, desc="Preparing contexts"):
-        for context in contexts:
+        # for context in tqdm(references, desc="Preparing references"):
+        for context in references:
             context_text = context[1]
-            tokenized_contexts = self.tokenizer(context_text, return_tensors="pt", truncation=False)
-            chunks = self.chunk_tokens(tokenized_contexts["input_ids"][0], max_length, overlap)
+            tokenized_references = self.tokenizer(context_text, return_tensors="pt", truncation=False)
+            chunks = self.chunk_tokens(tokenized_references["input_ids"][0], max_length, overlap)
             processed_chunks.extend(chunks)
         return processed_chunks  
     
@@ -63,16 +65,16 @@ class KNNLM:
                                     overlap:int,
                                     layer_index=-1):
         assert overlap >= 0.0 and overlap <= 1.0, "Overlap must be between [0, 1]"
-        assert isinstance(context_texts, list), "Contexts must be a list of lists"
+        assert isinstance(context_texts, list), "references must be a list of lists"
         # print(f"[!] constructing plus datastore from layer '{layer_index}'")
         begin_time = time.process_time()
         batch_datastores = []
-        for contexts in context_texts:
+        for references in context_texts:
             keys = []
             values = []
             batch_size = 8
-            for batch_contexts in chunked(contexts, batch_size):
-                splits = self.prepare_contexts_for_datastore(batch_contexts)
+            for batch_references in chunked(references, batch_size):
+                splits = self.prepare_references_for_datastore(batch_references)
                 for split, pick_from in splits:
                     split = split.unsqueeze(0).to(self.device)
                     with torch.no_grad():
@@ -217,7 +219,9 @@ class KNNLM:
     
     def generate(self, 
                 prompts: List[str], 
-                contexts: Optional[List[str]] = None, 
+                contexts: List[str],
+                references: Optional[List[str]] = None, 
+                alpha: float = 0.5,
                 lamba: float = 0.5,
                 strategy: str = 'constant',
                 max_length: int = 256,
@@ -235,55 +239,100 @@ class KNNLM:
                 temperature: float = 1.0,
                 ) -> List[List[int]]:
         self.model.eval()
-        
         if 'plus' in variant:
-            batch_datastores = self.construct_datastore_plus(contexts,
-                                                                  overlap=0.5,
-                                                                  layer_index=datastore_from_layer_index)
+            batch_datastores = self.construct_datastore_plus(references,
+                                                             overlap=0.5,
+                                                             layer_index=datastore_from_layer_index)
         else:
-            batch_datastores = self.construct_datastore_individually(contexts,
-                                                            layer_index=datastore_from_layer_index)     
-        tokenized_inputs = self.tokenizer(prompts,
-                                          return_tensors="pt",
-                                          padding=True,
-                                          truncation=True,
-                                          max_length=self.model.config.max_position_embeddings)
+            batch_datastores = self.construct_datastore_individually(references,
+                                                                     layer_index=datastore_from_layer_index) 
+            
+            
+        tokenized_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
         tokenized_inputs = {key: value.to(self.model.device) for key, value in tokenized_inputs.items()}
         input_ids = tokenized_inputs['input_ids']
-        cache_position = torch.arange(tokenized_inputs['input_ids'].shape[1], dtype=torch.int64, device=self.device)
-
         attention_mask = tokenized_inputs['attention_mask']
-        
-        cur_len = 0
-        batch_size = len(input_ids)
-        previous_lambda = torch.zeros((batch_size, 1), device=self.device)
-        # if strategy == 'entropy':
-            # print(f"[!] initial lamba: {previous_lambda}")
-            # print(f"[!] entropy strategy: {entropy_strategy}")        
-        unfinished_sents = input_ids.new(batch_size).fill_(1)
-        sent_lengths = input_ids.new(batch_size).fill_(max_length)
-        generated_tokens = [[] for _ in range(batch_size)] 
+        cache_position = torch.arange(tokenized_inputs['input_ids'].shape[1], dtype=torch.int64, device=self.device)
         model_kwargs = {
             "use_cache": True,
             "attention_mask": attention_mask,
             "cache_position": cache_position,
             "past_key_values": None
         }
+        
+        
+        inputs_with_contexts = [f"{context}{self.tokenizer.eos_token}{prompt}" for context, prompt in zip(contexts, prompts)]
+        tokenized_inputs_with_contexts = self.tokenizer(inputs_with_contexts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
+        tokenized_inputs_with_contexts = {key: value.to(self.model.device) for key, value in tokenized_inputs_with_contexts.items()}
+        input_ids_with_contexts = tokenized_inputs_with_contexts['input_ids']
+        attention_mask_with_contexts = tokenized_inputs_with_contexts['attention_mask']
+        cache_position_with_contexts = torch.arange(tokenized_inputs['input_ids'].shape[1], dtype=torch.int64, device=self.device)
+        model_kwargs_with_contexts = {
+            "use_cache": True,
+            "attention_mask": attention_mask_with_contexts,
+            "cache_position": cache_position_with_contexts,
+            "past_key_values": None
+        }
+        
+        cur_len = 0
+        batch_size = len(input_ids)
+        previous_lambda = torch.zeros((batch_size, 1), device=self.device)
+        
+        alpha_tr = torch.full((batch_size, 1), alpha, device=self.device)
+        unfinished_sents = input_ids.new(batch_size).fill_(1)
+        sent_lengths = input_ids.new(batch_size).fill_(max_length)
+        generated_tokens = [[] for _ in range(batch_size)] 
+
         entropies_history = [previous_lambda]
         lamba_history = [previous_lambda]
         with torch.no_grad():
             while cur_len < max_length:
-                model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
-                outputs = self.model(**model_inputs,
-                                     output_hidden_states=True)
-                next_token_logits = outputs.logits[:, -1, :] # (batch_size, vocab_size)
-                query_to_knn = outputs.hidden_states[datastore_from_layer_index][:, -1:, :]
-                model_kwargs["attention_mask"] = torch.cat([model_kwargs["attention_mask"], torch.ones((batch_size, 1), device=self.device)], dim=-1)
-                model_kwargs["past_key_values"] = outputs.past_key_values
-                model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + 1
+                if "context" not in variant or "adacad" in variant:
+                    model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
+                    outputs = self.model(**model_inputs,
+                                         output_hidden_states=True,
+                                         return_dict=True)
+                    next_token_logits = outputs.logits[:, -1, :]
+                    model_kwargs["attention_mask"] = torch.cat([model_kwargs["attention_mask"], torch.ones((batch_size, 1), device=self.device)], dim=-1)
+                    model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + 1
+                    model_kwargs["past_key_values"] = outputs.past_key_values
+                    
+                if "context" in variant or "adacad" in variant:
+                    model_inputs_with_contexts = self.model.prepare_inputs_for_generation(input_ids_with_contexts, **model_kwargs_with_contexts)
+                    outputs_with_contexts = self.model(**model_inputs_with_contexts,
+                                                       output_hidden_states=True,
+                                                       return_dict=True)
+                    next_token_logits_with_contexts = outputs_with_contexts.logits[:, -1, :]
+                    model_kwargs_with_contexts["attention_mask"] = torch.cat([model_kwargs_with_contexts["attention_mask"], torch.ones((batch_size, 1), device=self.device)], dim=-1)
+                    model_kwargs_with_contexts["cache_position"] = model_kwargs_with_contexts["cache_position"][-1:] + 1
+                    model_kwargs_with_contexts["past_key_values"] = outputs_with_contexts.past_key_values
+                    
+
+                outputs_hidden_states = outputs_with_contexts.hidden_states
+                final_token_logits = next_token_logits_with_contexts
+                
+                if "adacad" in variant:
+                    alpha_tr = CAD.compute_jsd_per_batch(next_token_logits_with_contexts, next_token_logits)
+                    outputs_hidden_states = outputs_with_contexts.hidden_states
+                    final_token_logits = (1 + alpha_tr) * next_token_logits_with_contexts - alpha_tr * next_token_logits
+                else:
+                    if "context" not in variant:
+                        outputs_hidden_states = outputs.hidden_states
+                        final_token_logits = next_token_logits
+                
+                
+                # final_input_ids = input_ids if "context" not in variant else input_ids_with_contexts
+                # is_last_input_id_pad = final_input_ids[:, -1].item() == self.tokenizer.pad_token_id
+                
+                query_to_knn = outputs_hidden_states[datastore_from_layer_index][:, -1:, :]
+                # query_to_knn = [] if is_last_input_id_pad else query_to_knn
+                # if len(query_to_knn) == 0:
+                    # print('aheh')
                 knn_next_token_probs = self.compute_knn_probs(batch_datastores, query_to_knn, k=k, temperature=temperature)
-                original_dtype = next_token_logits.dtype
-                original_next_token_probs = F.softmax(next_token_logits / temperature, dim=-1).float()
+                
+                
+                original_dtype = final_token_logits.dtype
+                original_next_token_probs = F.softmax(final_token_logits / temperature, dim=-1).float()
                 if strategy == 'entropy':
                     original_next_token_probs = torch.clamp(original_next_token_probs, min=1e-10)
                     entropy = -torch.sum(original_next_token_probs * torch.log(original_next_token_probs), dim=-1).unsqueeze(-1)
@@ -295,14 +344,15 @@ class KNNLM:
                         lamba = torch.exp(-normalized_entropy).to(original_dtype)
                     elif entropy_strategy == 'sig':
                         lamba = 1 / (1 + torch.exp(entropy - entropy_sigmoid_threshold))
+                    lamba = torch.clamp(lamba, min=0.2, max=0.8) # to avoid extreme values
                     lamba = lambda_smoothing_factor * lamba + (1 - lambda_smoothing_factor) * previous_lambda
                     entropies_history.append(entropy)
                     lamba_history.append(lamba)
                     previous_lambda = lamba
-                    
                     assert torch.all(lamba >= 0.0) and torch.all(lamba <= 1.0), "Lambda must be between [0, 1]"
+                    
+                    
                 next_token_probs = (1 - lamba) * knn_next_token_probs.to(original_dtype) + lamba * original_next_token_probs.to(original_dtype)
-
                 next_token = self.predict_next_token(probs=next_token_probs, 
                                                     decoding_strategy=decoding_strategy, 
                                                     top_p=top_p_value, 
@@ -312,6 +362,7 @@ class KNNLM:
                                                     generated_tokens=[set(tokens) for tokens in generated_tokens])
 
                 input_ids = torch.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
+                input_ids_with_contexts = torch.cat([input_ids_with_contexts, next_token.unsqueeze(-1)], dim=-1)
 
                 
                 cur_len += 1

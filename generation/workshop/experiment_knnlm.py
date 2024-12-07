@@ -42,6 +42,8 @@ variant = args.variant
 method = "knnlm"
 if "context" in variant:
     method = f"{method}-context"
+if "adacad" in variant:
+    method = f"{method}-adacad"
 if "plus" in variant:
     method = f"{method}-plus"
 method = f"{method}-{strategy}"
@@ -59,13 +61,12 @@ try:
                         layer_index):
         global device
         args.lamba = lamba
-        exists, finished, results = load_experiment(args)
+        exists, finished, all_results = load_experiment(args)
         if not args.override and finished:
             print("[!] experiment already exists, skipping...")
             sys.exit(1 if args.check_only else 0)
         if args.check_only:
             sys.exit(0)
-        truncate_results_found = len(results)
         device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         knnlm_model = KNNLM(model_name=model_name, device=device.index)
         config = {
@@ -82,38 +83,35 @@ try:
         work_dataset = preprocessor.process_dataset(config)
         
         needed_docids = work_dataset['docid'] # needed finished + needed not finished
-        results = [result for result in results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
-        computed_docids = [result['meta']['docid'] for result in results] # needed finished
-        initial_length = len(results)
-        print(f"[!] filtered {initial_length - len(results)} records")
-        
+        current_results = [result for result in all_results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
+        computed_docids = [result['meta']['docid'] for result in current_results] # needed finished
+        print(f"[!] used {len(all_results) - len(current_results)} relevent records")
         results_output_path, meta_output_path, _ = build_path(args)
         try:
             start_index = 0
             is_truncated_global = False
             filted_work_dataset = work_dataset.filter(lambda record: record['docid'] not in computed_docids)
             print(f"[!] filtered {len(work_dataset) - len(filted_work_dataset)} records")
+            record_counter = 0
             for batch in tqdm(filted_work_dataset.iter(batch_size=batch_size), desc="Batches", total=len(filted_work_dataset) // batch_size):
                 if any(batch['is_truncated']):
                     is_truncated_global = True
                 docids = batch['docid']
-                for docid in docids:
-                    if any([docid in result['meta']['docid'] for result in results]):
-                        truncate_results_found -= 1
-                        start_index += 1
-                        continue
                 prefixes = batch['previous_text']
                 refs = batch['gold_text']
                 contexts = batch['context']
                 context_prefixes = batch['context_prefix']
-                prompts = batch['prompt']
-                if "context" in variant:
-                    prompts = [f"{context_prefix}\n\n{context}{knnlm_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
+                
+                references = contexts.copy()
                 if "plus" in variant:
-                    contexts = batch['meta.oracle_documents']
+                    references = batch['meta.oracle_documents']
+                    
+                contexts = [f"{context_prefix}\n\n{context}" for context_prefix, context in zip(context_prefixes, contexts)]
+                prompts = batch['prompt']
                 outputs = knnlm_model.generate(
                     prompts=prompts,
                     contexts=contexts,
+                    references=references,
                     max_length=max_new_tokens,
                     lamba=lamba,
                     strategy=strategy,
@@ -139,11 +137,15 @@ try:
                     new_object["meta"]['prompt'] = prompt
                     new_object["meta"]['context'] = context
                     new_object["gen"] = generated_text
-                    results.append(new_object)
-                write_results(results, results_output_path)
+                    current_results.append(new_object)
+                    all_results.append(new_object)
+                    record_counter += 1
+                if record_counter % 10 == 0:
+                    write_results(all_results, results_output_path)
+            write_results(all_results, results_output_path)
             knnlm_model.model.to(torch.device('cpu'))
             args.is_truncated = is_truncated_global
-            experiment_results = evaluate(results, device, work_dataset, args.method)
+            experiment_results = evaluate(current_results, device, work_dataset, args.method)
             experiment_results['knn_k'] = k
             experiment_results['lamba'] = lamba
             experiment_results['layer_index'] = layer_index

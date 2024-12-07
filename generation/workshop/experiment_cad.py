@@ -52,7 +52,7 @@ device = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
 try:
     def carry_experiment(alpha):
         args.alpha = alpha
-        exists, finished, results = load_experiment(args)
+        exists, finished, all_results = load_experiment(args)
         if not args.override and finished:
             print("[!] experiment already exists, skipping...")
             sys.exit(1 if args.check_only else 0)
@@ -73,15 +73,15 @@ try:
         preprocessor = ModelInputPreprocessor(tokenizer=cad_model.tokenizer)
         work_dataset = preprocessor.process_dataset(config)
         needed_docids = work_dataset['docid'] # needed finished + needed not finished
-        results = [result for result in results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
-        computed_docids = [result['meta']['docid'] for result in results] # needed finished
-        initial_length = len(results)
-        print(f"[!] filtered {initial_length - len(results)} records")
+        current_results = [result for result in all_results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
+        computed_docids = [result['meta']['docid'] for result in current_results] # needed finished
+        print(f"[!] used {len(all_results) - len(current_results)} relevent records")
         try:
             is_truncated_global = False
             start_index = 0
             filted_work_dataset = work_dataset.filter(lambda record: record['docid'] not in computed_docids)
             print(f"[!] filtered {len(work_dataset) - len(filted_work_dataset)} records")
+            record_counter = 0
             for batch in tqdm(filted_work_dataset.iter(batch_size=batch_size), desc="Batches", total=len(filted_work_dataset) // batch_size):
                 if any(batch['is_truncated']):
                     is_truncated_global = True
@@ -123,11 +123,15 @@ try:
                     new_object["meta"]['prompt'] = prompt
                     new_object["meta"]['context'] = context
                     new_object["gen"] = generated_text
-                    results.append(new_object)
-                write_results(results, results_output_path)
+                    current_results.append(new_object)
+                    all_results.append(new_object)
+                    record_counter += 1
+                if record_counter % 10 == 0:
+                    write_results(all_results, results_output_path)
+            write_results(all_results, results_output_path)
             cad_model.model.to(torch.device('cpu'))
             args.is_truncated = is_truncated_global
-            experiment_results = evaluate(results, device, work_dataset, args.method)
+            experiment_results = evaluate(current_results, device, work_dataset, args.method)
             start_index += batch_size
             if alpha is not None:
                 experiment_results['alpha'] = alpha

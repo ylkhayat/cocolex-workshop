@@ -118,7 +118,8 @@ class CAD:
             next_token = torch.argmax(logits, dim=-1)
         return next_token
 
-    def get_jsd(self, p, q):
+    @staticmethod
+    def get_jsd(p, q):
         original_dtype = p.dtype
         p = p.to(torch.float32)
         q = q.to(torch.float32)
@@ -142,14 +143,18 @@ class CAD:
 
         return result.to(original_dtype)
     
-    def compute_jsd_per_batch(self, p, q):
+    @staticmethod
+    def compute_jsd_per_batch(p, q):
         batch_size = p.size(0)
         jsd_values = []
         for i in range(batch_size):
-            jsd = self.get_jsd(p[i], q[i])
+            jsd = CAD.get_jsd(p[i], q[i])
+            if jsd > 1.0:
+                print(f'Hopeopeopeopeop! {jsd}')
+            jsd = torch.clamp(jsd, min=0.3) # 0.3 for long form generation
             jsd_values.append(jsd)
-        return torch.tensor(jsd_values, device=p.device, dtype=p.dtype)
-
+        return torch.tensor(jsd_values, device=p.device, dtype=p.dtype).unsqueeze(-1)
+    
     def calculate_eos_weight(self, entropy, entropy_with_contexts, beta=1.0):
         """
         Calculates a weight or penalty for the EOS token logits based on entropies.
@@ -179,7 +184,6 @@ class CAD:
                 ) -> List[List[int]]:
         self.model.eval()
         eos_token_id = self.tokenizer.eos_token_id
-        
         # Tokenize 'prompts' and create attention masks
         tokenized_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
         tokenized_inputs = {key: value.to(self.model.device) for key, value in tokenized_inputs.items()}
@@ -211,6 +215,8 @@ class CAD:
         # Initialize variables for generation loop
         cur_len = 0
         batch_size = len(input_ids)
+        
+        alpha_tr = torch.full((batch_size, 1), alpha if alpha is not None else 0.0, device=self.device)
         unfinished_sents = input_ids_with_contexts.new(batch_size).fill_(1)
         sent_lengths = input_ids_with_contexts.new(batch_size).fill_(max_length)
         min_length = max_length // 2  # 25% of the max length
@@ -239,11 +245,9 @@ class CAD:
 
                 if method == 'adacad':
                     alpha_tr = self.compute_jsd_per_batch(next_token_logits_with_contexts, next_token_logits)
-                    alpha = torch.clamp(alpha_tr, min=0.0, max=1.0).unsqueeze(-1)
-                    # pbar.set_postfix({"Alpha": alpha.mean().item()})
                 # eos_token_logits = next_token_logits[:, self.tokenizer.eos_token_id]
 # 
-                next_token_logits = (1 + alpha) * next_token_logits_with_contexts - alpha * next_token_logits
+                next_token_logits = (1 + alpha_tr) * next_token_logits_with_contexts - alpha_tr * next_token_logits
                 # if cur_len < min_length:
                     # probs = F.softmax(next_token_logits, dim=-1)
                     # eos_prob = probs[:, eos_token_id]
