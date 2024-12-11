@@ -1,7 +1,6 @@
 print(f"[!] loading dependencies!")
 import copy
 from evaluate import load
-from sqlalchemy import all_
 print(f"[!] loading evaluation!")
 from generation.evaluation.align_score.src.alignscore import AlignScore
 from generation.evaluation.unieval.metric.evaluator import get_evaluator
@@ -48,6 +47,14 @@ def build_args_parser(method):
     parser.add_argument("--use_instructions", type=int, default=0)
     parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
     args = parser.parse_args()
+    
+    if 'echr_qa' in args.dataset:
+        args.max_new_tokens = 300
+    elif 'clerc' in args.dataset:
+        args.max_new_tokens = 200
+    elif 'echr' in args.dataset:
+        args.max_new_tokens = 300
+        
     args.use_instructions = args.use_instructions == 1
     args.override = args.override == 1
     return args
@@ -96,6 +103,8 @@ results_path_excluded_keys = common_excluded_keys | {"is_truncated" , "dataset_p
 meta_path_excluded_keys = common_excluded_keys | {"is_truncated"}
 
 def build_path(args):
+    local_results_path_excluded_keys = results_path_excluded_keys
+    local_meta_path_excluded_keys = meta_path_excluded_keys
     try:
         args = vars(args)
     except:
@@ -106,12 +115,16 @@ def build_path(args):
         split = args['split']
     model = args['model']
     method = args['method']
+    if "knnlm" in method and "entropy" not in args["strategy"]:
+        extra_keys = {"entropy_sigmoid_threshold", "lambda_smoothing_factor"}
+        local_results_path_excluded_keys = local_results_path_excluded_keys | extra_keys
+        local_meta_path_excluded_keys = local_meta_path_excluded_keys | extra_keys
     dataset = args['dataset']
     top_k_passages = args['top_k_passages']
     setup = args['setup']
-    results_params = {k: v for k, v in args.items() if k not in results_path_excluded_keys}
+    results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
     results_params_str = "_".join([f"{key[:2]}-{value}" for key, value in results_params.items()])
-    meta_params = {k: v for k, v in args.items() if k not in meta_path_excluded_keys}
+    meta_params = {k: v for k, v in args.items() if k not in local_meta_path_excluded_keys}
     meta_params_str = "_".join([f"{key[:2]}-{value}" for key, value in meta_params.items()])
 
     model_cleaned = model.replace("/", "_")
@@ -308,6 +321,7 @@ def add_experiment(data, args):
     client = gspread.authorize(creds)
     spreadsheet_url = "https://docs.google.com/spreadsheets/d/1bE5AbY1hrqlR-_v-ohLCgHA6hFvRCTpH4lrRPqXm9UU/edit?usp=sharing"
     sheet = client.open_by_url(spreadsheet_url)
-    worksheet = sheet.get_worksheet(0)
+    worksheet = sheet.worksheet(f'Generation — {args["dataset_percentage"]}')
+    # worksheet = sheet.get_worksheet(0)
     worksheet.append_row(new_row, value_input_option="USER_ENTERED")
     print("[!] added experiment metric!")

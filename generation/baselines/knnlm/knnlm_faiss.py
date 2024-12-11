@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 
 from generation.baselines.cad.cad import CAD
+import faiss
 
 
 class KNNLM:
@@ -88,13 +89,14 @@ class KNNLM:
                         keys.extend(hidden_states[j])
                         values.extend(next_tokens[j])
             # print(f"[!] collected keys: {len(keys)}")
-            keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
+            keys = np.array(keys).reshape(-1, np.array(keys).shape[-1]).astype('float32')
             values = np.array(values).reshape(-1)
-            nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
-            nneighbors.fit(keys)
+            index = faiss.IndexFlatL2(keys.shape[1])
+            faiss.normalize_L2(keys)
+            index.add(keys)
             batch_datastores.append({
-                'store': nneighbors,
-                'values': np.array(values)
+                'store': index,
+                'values': values
             })
         elapsed_time = time.process_time() - begin_time
         # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
@@ -141,12 +143,13 @@ class KNNLM:
         
         for i in range(batch_size):
             current_batch_datastore = batch_datastores[i]
-            nneighbors = current_batch_datastore['store']
+            faiss_store_index = current_batch_datastore['store']
             values = current_batch_datastore['values'].reshape(-1)
-            query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
-
-            distances, indices = nneighbors.kneighbors(query_flat)
-            logits = 50 / distances
+            query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy().astype('float32')
+            faiss.normalize_L2(query_flat)
+            distances, indices = faiss_store_index.search(query_flat, k=k)
+            distances = np.clip(distances, 1e-10, None)  # Avoid division by zero
+            logits = 20 / distances
             
             neighbor_values = values[indices]
             knn_logits = np.zeros((query_flat.shape[0], self.model.config.vocab_size))
@@ -155,6 +158,7 @@ class KNNLM:
                     token_id = neighbor_values[j, l]
                     knn_logits[j, token_id] += logits[j, l]
             knn_logits[knn_logits == 0.0] = -10000.0
+            # knn_logits = np.clip(knn_logits, -10000, 10000)  # Avoid overflow in exp
             knn_probs = np.exp(knn_logits) / np.exp(knn_logits).sum(axis=-1, keepdims=True)
             knn_probs_list.append(knn_probs)
         knn_probs_list = torch.tensor(np.concatenate(knn_probs_list, axis=0), device=self.device)

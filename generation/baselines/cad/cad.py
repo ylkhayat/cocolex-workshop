@@ -149,9 +149,7 @@ class CAD:
         jsd_values = []
         for i in range(batch_size):
             jsd = CAD.get_jsd(p[i], q[i])
-            if jsd > 1.0:
-                print(f'Hopeopeopeopeop! {jsd}')
-            jsd = torch.clamp(jsd, min=0.3) # 0.3 for long form generation
+            jsd = torch.clamp(jsd, min=0.3, max=1.0) # 0.3 for long form generation
             jsd_values.append(jsd)
         return torch.tensor(jsd_values, device=p.device, dtype=p.dtype).unsqueeze(-1)
     

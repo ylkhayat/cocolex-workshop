@@ -2,8 +2,8 @@
 
 
 # Reload the conda environment
-# source /srv/elkhyo/anaconda3/etc/profile.d/conda.sh
-# conda activate pld
+source /srv/elkhyo/anaconda3/etc/profile.d/conda.sh
+conda activate pld
 
 cd "$(dirname "$0")" || exit
 
@@ -17,17 +17,20 @@ split=$1
 run_mode=${2:-all}
 variant_mode=${3:-all}
 
-models=(mistralai/Mistral-7B-Instruct-v0.3)
+models=(Equall/Saul-7B-Instruct-v1 mistralai/Mistral-7B-Instruct-v0.3)
 # setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
-setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents)
+# setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents)
+setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents bm25_noisy_oracle_passages_oracle_documents)
 instructions=(1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
 # knnlm_variants=(normal context plus context_plus)
-knnlm_variants=(context context_adacad context_plus context_adacad_plus)
-datasets=(clerc)
+# knnlm_variants=(context context_adacad context_plus context_adacad_plus)
+knnlm_variants=(context context_plus)
+# datasets=(clerc)
+datasets=(echr_qa)
+dataset_percentage=0.1
 # dataset_percentage=1.0
-dataset_percentage=0.01
 
 # Function to wait for an available GPU
 wait_for_gpu() {
@@ -119,7 +122,7 @@ for dataset in "${datasets[@]}"; do
                         tmux new-window -t "$session_name" -n "rag_${setup}" \
                             "./run_experiments_rag.sh $python_args --device $gpu; \
                             if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                        sleep 27
+                        sleep 18
                     fi
                 fi
 
@@ -140,7 +143,7 @@ for dataset in "${datasets[@]}"; do
                             tmux new-window -t "$session_name" -n "cad_${setup}_${strategy}" \
                                 "./run_experiments_cad.sh $python_args --device $gpu; \
                                 if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                            sleep 27
+                            sleep 18
                         fi
                     done
                 fi
@@ -174,7 +177,7 @@ for dataset in "${datasets[@]}"; do
                                 tmux new-window -t "$session_name" -n "knn_${setup}_${knn_method}_${knn_variant}" \
                                     "./run_experiments_knnlm.sh $python_args --device $gpu; \
                                     if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                                sleep 27
+                                sleep 18
                             fi
                         done
                     done

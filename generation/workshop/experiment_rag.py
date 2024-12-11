@@ -66,7 +66,7 @@ work_dataset = preprocessor.process_dataset(config)
 needed_docids = work_dataset['docid'] # needed finished + needed not finished
 current_results = [result for result in all_results if result['meta']['docid'] in needed_docids] # needed finished + not needed finished
 computed_docids = [result['meta']['docid'] for result in current_results] # needed finished
-print(f"[!] used {len(all_results) - len(current_results)} relevent records")
+print(f"[!] used {len(current_results)} relevent records")
 try:
     results_output_path, meta_output_path, _ = build_path(args)
     start_index = 0

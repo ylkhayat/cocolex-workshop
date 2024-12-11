@@ -57,7 +57,7 @@ declare -A validations
 
 # Define validations for specific parameters
 validations["dataset"]="clerc|echr"
-validations["setup"]="bm25_oracle_passages_oracle_documents|bm25_relevant_passages_oracle_documents|dense_oracle_passages_oracle_documents|dense_relevant_passages_oracle_documents"
+validations["setup"]="bm25_oracle_passages_oracle_documents|bm25_relevant_passages_oracle_documents|dense_oracle_passages_oracle_documents|dense_relevant_passages_oracle_documents|bm25_noisy_oracle_passages_oracle_documents"
 validations["split"]="train|test"
 validations["method"]="rag|cad|knnlm"
 validations["variant"]="normal"

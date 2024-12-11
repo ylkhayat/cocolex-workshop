@@ -47,6 +47,43 @@ class TextSection:
 class ModelInputPreprocessor:
     def __init__(self, tokenizer: PreTrainedTokenizerBase):
         self.tokenizer = tokenizer
+        self.dataset_to_system_prompt = {
+            "clerc": "You are a helpful legal professional.",
+            "echr_qa": "You are an ECHR legal expert tasked to answer a question.",
+        }
+        # must pass joined_retrieved_ids
+        self.dataset_to_context_prefix = {
+            "clerc": (
+                "Below are reference cases provided for factual accuracy. When generating content, you must "
+                "reference and cross-check the relevant details with the provided reference texts by their "
+                "reference IDs. (e.g., {joined_retrieved_ids}). Your output must align with these references."
+            ),
+            "echr_qa": (
+                "The following documents were retrieved and should help you answer the question. "
+                "You must refer to these documents when answering the question. (e.g., {joined_retrieved_ids}). "
+                "Valid citation formats: [{single_retrieved_id}] or [{joined_retrieved_ids}]. "
+            ),
+        }
+        self.dataset_to_prompt_prefix = {
+            "clerc": (
+                'Continue to write the following case in the style of my writeup. Your answer should range '
+                'from 100 to 400 words. Make your answer concise, and avoid redundant languages and assumptions. '
+                'Below is what I have written so far:'
+            ),
+            "echr_qa": (
+                "Answer the following question using the retrieved documents. "
+                "Reuse the language from the documents! "
+                "Cite relevant documents at the end of a sentence! "
+                "Accepted formats: sentence [citation(s)]. "
+                "You must follow the [Doc i] format! Do NOT use the case names or paragraph numbers to cite documents! "
+                "You should NOT provide a list of all used citations at the end of your response!\n\n"
+                "Question: "
+            ),
+        }
+        self.dataset_to_prompt_suffix = {
+            "clerc": "",
+            "echr_qa": "\nAnswer: ",
+        }
 
     def build_context_prompt(self,
                              prompt,
@@ -54,36 +91,35 @@ class ModelInputPreprocessor:
                              method,
                              max_tokens,
                              use_instructions):
+        assert (
+            self.dataset in self.dataset_to_context_prefix and 
+            self.dataset in self.dataset_to_prompt_prefix and 
+            self.dataset in self.dataset_to_prompt_suffix and
+            self.dataset in self.dataset_to_system_prompt
+        ), f"Dataset '{self.dataset}' not supported."
         assert isinstance(contexts, list) and len(contexts) > 0, "Contexts must be a non-empty list of strings."
         retrieved_ids = [doc.split('\n')[0] for doc in contexts]
         def _get_copy(section):
             return copy.deepcopy(section)
         prefix_linker_section = TextSection("prefix_linker", "\n\n", priority=0, tokenizer=self.tokenizer)
-        context_prefix = (
-            "Below are reference cases provided for factual accuracy. When generating content, you must "
-            "reference and cross-check the relevant details with the provided reference texts by their "
-            "reference IDs. (e.g., " + ', '.join(retrieved_ids) + "). Your output must align with these references."
-        )
+        context_prefix = self.dataset_to_context_prefix[self.dataset].format(joined_retrieved_ids=', '.join(retrieved_ids), single_retrieved_id=retrieved_ids[0])
         context_prefix_section = TextSection("context_prefix", context_prefix, priority=0, tokenizer=self.tokenizer)
         context_sections = []
         for i, context in enumerate(contexts):
             context_sections.append(TextSection(f"ref_text_{i}", context, priority=1, tokenizer=self.tokenizer))
             if i < len(contexts) - 1:
                 context_sections.append(TextSection("prefix_linker", "\n\n", priority=0, tokenizer=self.tokenizer))
-                
-        prompt_prefix = (
-            'Continue to write the following case in the style of my writeup. Your answer should range '
-            'from 100 to 400 words. Make your answer concise, and avoid redundant languages and assumptions. '
-            'Below is what I have written so far:'
-        )
+        prompt_prefix = self.dataset_to_prompt_prefix[self.dataset]
         
-        prompt_intro_section = TextSection("prompt_intro", prompt_prefix, priority=0, tokenizer=self.tokenizer)
+        prompt_prefix_section = TextSection("prompt_prefix", prompt_prefix, priority=0, tokenizer=self.tokenizer)
+        prompt_suffix = self.dataset_to_prompt_suffix[self.dataset]
+        prompt_suffix_section = TextSection("prompt_suffix", prompt_suffix, priority=0, tokenizer=self.tokenizer)
         prompt_section = TextSection("prompt", prompt, priority=2, tokenizer=self.tokenizer)
         building_sections = []
         if method == "rag" or method == "cad" or "context" in method:
             building_sections.append([context_prefix_section, _get_copy(prefix_linker_section)])
             building_sections.append(context_sections)
-        building_sections.append([prompt_intro_section, _get_copy(prefix_linker_section), prompt_section])
+        building_sections.append([prompt_prefix_section, _get_copy(prefix_linker_section), prompt_section, prompt_suffix_section])
         
         all_sections = [section for group in building_sections for section in group]
         all_sections_token_count = [section.token_count() for section in all_sections]
@@ -108,7 +144,7 @@ class ModelInputPreprocessor:
 
         context_prefix = context_prefix_section.text
         ref_text = ''.join([section.text for section in context_sections])
-        formatted_prompt = prompt_intro_section.text + prefix_linker_section.text + prompt_section.text
+        formatted_prompt = prompt_prefix_section.text + prefix_linker_section.text + prompt_section.text + prompt_suffix_section.text
         
         if use_instructions and 'apply_chat_template' in dir(self.tokenizer):
             formatted_prompt = self._apply_chat_template(formatted_prompt)
@@ -117,7 +153,7 @@ class ModelInputPreprocessor:
 
     def _apply_chat_template(self, prompt):
         prompt_chat_parts = [
-            {"role": "system", "content": "You are a helpful legal professional."},
+            {"role": "system", "content": self.dataset_to_system_prompt[self.dataset]},
             {"role": "user", "content": prompt},
         ]
         return self.tokenizer.apply_chat_template(prompt_chat_parts, tokenize=False)
@@ -126,7 +162,12 @@ class ModelInputPreprocessor:
         prev_text = record['previous_text']
         gold_text = record['gold_text']
         oracle_documents = record['citations']
-        retrieved_docs = record['top_10_passages'][:top_k]
+        if 'top_10_passages' in record.keys():
+            retrieved_docs = record['top_10_passages'][:top_k]
+        elif 'top_k_passages' in record.keys():
+            retrieved_docs = record['top_k_passages'][:top_k]
+        else:
+            raise ValueError("[!] no top_k_passages found in record.")
 
         context_prefix, contexts, prompt, is_truncated = self.build_context_prompt(prompt=prev_text,
                                                                      contexts=retrieved_docs,
@@ -161,16 +202,27 @@ class ModelInputPreprocessor:
         self.split = config['split']
         self.top_k_passages = config['top_k_passages']
         self.use_instructions = config['use_instructions'] or False
-        
-        dataset_repo_name = "CLERC-generation-workshop"
+
+        current_dataset = None
+        workshop_hf_name = "ylkhayat/{dataset_name}-generation-workshop"
+        if self.dataset == "clerc":
+            dataset_repo_name_prefix = "CLERC"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         if self.dataset == "echr":
-            dataset_repo_name = "ECHR-generation-workshop"
-        dataset_repo_name = f"ylkhayat/{dataset_repo_name}"
-        current_dataset = load_dataset(dataset_repo_name, data_dir=self.setup, split=self.split)
+            dataset_repo_name_prefix = "ECHR"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        elif self.dataset == "echr_qa":
+            dataset_repo_name_prefix = "ECHR_QA"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            url=f"https://huggingface.co/datasets/{workshop_hf_name}/resolve/main/{self.setup}/"
+            current_dataset = load_dataset("parquet", data_files={self.split: f"{url}{self.split}*.parquet"})[self.split]
+        assert current_dataset is not None, f"Dataset '{self.dataset}' not supported."
         length_of_dataset = int(len(current_dataset) * self.dataset_percentage)
 
-        print(f"[!] dataset: {dataset_repo_name}")
-        print(f"[!] num of records: {length_of_dataset}")
+        print(f"[!] dataset: '{workshop_hf_name}'")
+        print(f"[!] experiment num of records: {length_of_dataset}")
 
         processed_dataset = current_dataset.select(range(length_of_dataset))
         processed_dataset = processed_dataset.map(
