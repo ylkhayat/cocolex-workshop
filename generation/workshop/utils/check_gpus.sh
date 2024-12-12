@@ -1,6 +1,6 @@
 #!/bin/bash
 
-threshold=${1:-15}
+threshold=${1:-30}
 
 nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader,nounits | while IFS=, read -r index used total; do
     current_hour=$(date +%H)

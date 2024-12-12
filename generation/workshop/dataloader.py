@@ -152,10 +152,13 @@ class ModelInputPreprocessor:
         return context_prefix, ref_text, formatted_prompt, truncation
 
     def _apply_chat_template(self, prompt):
-        prompt_chat_parts = [
-            {"role": "system", "content": self.dataset_to_system_prompt[self.dataset]},
-            {"role": "user", "content": prompt},
-        ]
+        use_system = True
+        if "Saul" in self.tokenizer.name_or_path:
+            use_system = False
+        prompt_chat_parts = []
+        if use_system:
+            prompt_chat_parts.append({"role": "system", "content": self.dataset_to_system_prompt[self.dataset]})
+        prompt_chat_parts.append({"role": "user", "content": prompt})
         return self.tokenizer.apply_chat_template(prompt_chat_parts, tokenize=False)
     
     def preprocess_record(self, record, top_k, method, max_tokens, use_instructions):

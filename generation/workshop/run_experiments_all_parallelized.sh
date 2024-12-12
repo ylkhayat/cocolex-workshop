@@ -17,18 +17,33 @@ split=$1
 run_mode=${2:-all}
 variant_mode=${3:-all}
 
-models=(Equall/Saul-7B-Instruct-v1 mistralai/Mistral-7B-Instruct-v0.3)
-# setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft)
-# setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents)
-setups=(bm25_oracle_passages_oracle_documents bm25_relevant_passages_oracle_documents bm25_noisy_oracle_passages_oracle_documents)
+models=(
+    # Equall/Saul-7B-Instruct-v1 
+    meta-llama/Llama-3.1-8B-Instruct
+    # mistralai/Mistral-7B-Instruct-v0.3
+    )
+setups=(
+    bm25_oracle_passages_oracle_documents 
+    bm25_relevant_passages_oracle_documents 
+    bm25_noisy_oracle_passages_oracle_documents
+    # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
+    # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
+    )
 instructions=(1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
-# knnlm_variants=(normal context plus context_plus)
-# knnlm_variants=(context context_adacad context_plus context_adacad_plus)
-knnlm_variants=(context context_plus)
-# datasets=(clerc)
-datasets=(echr_qa)
+knnlm_variants=(
+    # normal
+    context 
+    # context_adacad 
+    # plus
+    context_plus 
+    # context_adacad_plus
+    )
+datasets=(
+    # clerc
+    echr_qa
+    )
 dataset_percentage=0.1
 # dataset_percentage=1.0
 
@@ -91,6 +106,16 @@ log_new_experiment() {
     echo -e "$prefix"
 }
 
+log_skip_experiment() {
+    experiment_name=$1
+    current_extra_info=$2
+    short_setup=$(echo "$setup" | awk -F'_' '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))}1' OFS='')
+    upper_dataset=$(echo "$dataset" | tr '[:lower:]' '[:upper:]')
+    first_setup="[$upper_dataset][$short_setup]"
+    prefix="${BLUE}●${RESET} ${BOLD}${RED}[${experiment_name}]${RESET} ${YELLOW}${model}${RESET} ● ${GREEN}${first_setup}${RESET} ● ${PURPLE}${current_extra_info}${RESET} ● ${CYAN}GPU ${gpu}${RESET}"
+    echo -e "${prefix} — ${RED}SKIPPED${RESET}"
+}
+
 session_name="experiment_session"
 tmux new-session -d -s "$session_name" || tmux attach -t "$session_name"
 
@@ -117,12 +142,17 @@ for dataset in "${datasets[@]}"; do
                                 --use_instructions \"$instructed\""
                     # should_run=$(check_experiment "./run_experiments_rag.sh" "$python_args")
                     if [[ $should_run -eq 0 ]]; then
-                        gpu=$(wait_for_gpu)
-                        log_new_experiment "RAG" "$extra_info"
-                        tmux new-window -t "$session_name" -n "rag_${setup}" \
-                            "./run_experiments_rag.sh $python_args --device $gpu; \
-                            if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                        sleep 18
+                        window_name="rag_${setup}"
+                        if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
+                            gpu=$(wait_for_gpu)
+                            log_new_experiment "RAG" "$extra_info"
+                            tmux new-window -t "$session_name" -n "$window_name" \
+                                "./run_experiments_rag.sh $python_args --device $gpu; \
+                                if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                            sleep 18
+                        else
+                            log_skip_experiment "RAG" "$extra_info"
+                        fi
                     fi
                 fi
 
@@ -138,12 +168,17 @@ for dataset in "${datasets[@]}"; do
                                     --use_instructions \"$instructed\""
                         # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                         if [ $should_run -eq 0 ]; then
-                            gpu=$(wait_for_gpu)
-                            log_new_experiment "CAD" "$extra_info[$strategy]"
-                            tmux new-window -t "$session_name" -n "cad_${setup}_${strategy}" \
-                                "./run_experiments_cad.sh $python_args --device $gpu; \
-                                if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                            sleep 18
+                            window_name="cad_${setup}_${strategy}"
+                            if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
+                                gpu=$(wait_for_gpu)
+                                log_new_experiment "CAD" "$extra_info[$strategy]"
+                                tmux new-window -t "$session_name" -n "$window_name" \
+                                    "./run_experiments_cad.sh $python_args --device $gpu; \
+                                    if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                                sleep 18
+                            else
+                                log_skip_experiment "CAD" "$extra_info[$strategy]"
+                            fi
                         fi
                     done
                 fi
@@ -172,12 +207,17 @@ for dataset in "${datasets[@]}"; do
                                         --variant \"$knn_variant\""
                             # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                             if [ $should_run -eq 0 ]; then
-                                gpu=$(wait_for_gpu)
-                                log_new_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"
-                                tmux new-window -t "$session_name" -n "knn_${setup}_${knn_method}_${knn_variant}" \
-                                    "./run_experiments_knnlm.sh $python_args --device $gpu; \
-                                    if [ \$? -eq 1 ]; then read; else tmux kill-window; fi"
-                                sleep 18
+                                window_name="knn_${setup}_${knn_method}_${knn_variant}"
+                                if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
+                                    gpu=$(wait_for_gpu)
+                                    log_new_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"
+                                    tmux new-window -t "$session_name" -n "$window_name" \
+                                        "./run_experiments_knnlm.sh $python_args --device $gpu; \
+                                        if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                                    sleep 18
+                                else
+                                    log_skip_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"
+                                fi
                             fi
                         done
                     done
