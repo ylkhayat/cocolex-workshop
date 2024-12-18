@@ -1,7 +1,13 @@
-import copy
-import ipdb
 from transformers import PreTrainedTokenizerBase
+from dataloader_extras import (
+    dataset_to_system_prompt,
+    dataset_to_context_prefix,
+    dataset_to_prompt_prefix,
+    dataset_to_prompt_suffix
+    )
 from datasets import load_dataset
+import copy
+import sys
 import os
 
 num_proc = os.cpu_count()
@@ -45,45 +51,50 @@ class TextSection:
 
 
 class ModelInputPreprocessor:
-    def __init__(self, tokenizer: PreTrainedTokenizerBase):
-        self.tokenizer = tokenizer
-        self.dataset_to_system_prompt = {
-            "clerc": "You are a helpful legal professional.",
-            "echr_qa": "You are an ECHR legal expert tasked to answer a question.",
-        }
+    def __init__(self, config: dict):
+        self.dataset_to_system_prompt = dataset_to_system_prompt
         # must pass joined_retrieved_ids
-        self.dataset_to_context_prefix = {
-            "clerc": (
-                "Below are reference cases provided for factual accuracy. When generating content, you must "
-                "reference and cross-check the relevant details with the provided reference texts by their "
-                "reference IDs. (e.g., {joined_retrieved_ids}). Your output must align with these references."
-            ),
-            "echr_qa": (
-                "The following documents were retrieved and should help you answer the question. "
-                "You must refer to these documents when answering the question. (e.g., {joined_retrieved_ids}). "
-                "Valid citation formats: [{single_retrieved_id}] or [{joined_retrieved_ids}]. "
-            ),
-        }
-        self.dataset_to_prompt_prefix = {
-            "clerc": (
-                'Continue to write the following case in the style of my writeup. Your answer should range '
-                'from 100 to 400 words. Make your answer concise, and avoid redundant languages and assumptions. '
-                'Below is what I have written so far:'
-            ),
-            "echr_qa": (
-                "Answer the following question using the retrieved documents. "
-                "Reuse the language from the documents! "
-                "Cite relevant documents at the end of a sentence! "
-                "Accepted formats: sentence [citation(s)]. "
-                "You must follow the [Doc i] format! Do NOT use the case names or paragraph numbers to cite documents! "
-                "You should NOT provide a list of all used citations at the end of your response!\n\n"
-                "Question: "
-            ),
-        }
-        self.dataset_to_prompt_suffix = {
-            "clerc": "",
-            "echr_qa": "\nAnswer: ",
-        }
+        self.dataset_to_context_prefix = dataset_to_context_prefix
+        self.dataset_to_prompt_prefix = dataset_to_prompt_prefix
+        self.dataset_to_prompt_suffix = dataset_to_prompt_suffix
+        required_keys = ['method', 'dataset', 'dataset_percentage', 'setup', 'split', 'top_k_passages']
+        for key in required_keys:
+            if key not in config:
+                raise KeyError(f"[!] Missing required config key: {key}")
+
+        self.method = config['method']
+        self.dataset = config['dataset']
+        self.dataset_percentage = config['dataset_percentage']
+        self.setup = config['setup']
+        self.split = config['split']
+        self.top_k_passages = config['top_k_passages']
+        self.use_instructions = config['use_instructions'] or False
+
+        self.current_dataset = None
+        workshop_hf_name = "ylkhayat/{dataset_name}-generation-workshop"
+        if self.dataset == "clerc":
+            if 'noisy' in self.setup:
+                print("[!] noisy data not supported for CLERC.")
+                sys.exit(0)
+            dataset_repo_name_prefix = "CLERC"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        if self.dataset == "echr":
+            dataset_repo_name_prefix = "ECHR"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        elif self.dataset == "echr_qa":
+            dataset_repo_name_prefix = "ECHR_QA"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            url=f"https://huggingface.co/datasets/{workshop_hf_name}/resolve/main/{self.setup}/"
+            self.current_dataset = load_dataset("parquet", data_files={self.split: f"{url}{self.split}*.parquet"})[self.split]
+        assert self.current_dataset is not None, f"Dataset '{self.dataset}' not supported."
+        length_of_dataset = int(len(self.current_dataset) * self.dataset_percentage)
+
+        print(f"[!] dataset: '{workshop_hf_name}'")
+        print(f"[!] experiment num of records: {length_of_dataset}")
+
+        self.processed_dataset = self.current_dataset.select(range(length_of_dataset))
 
     def build_context_prompt(self,
                              prompt,
@@ -191,44 +202,10 @@ class ModelInputPreprocessor:
             }
         }
 
-    def process_dataset(self, config):
-        required_keys = ['method', 'dataset', 'dataset_percentage', 'setup', 'split', 'top_k_passages', 'max_tokens']
-        for key in required_keys:
-            if key not in config:
-                raise KeyError(f"[!] Missing required config key: {key}")
-            
-        self.max_tokens = config['max_tokens']
-        self.method = config['method']
-        self.dataset = config['dataset']
-        self.dataset_percentage = config['dataset_percentage']
-        self.setup = config['setup']
-        self.split = config['split']
-        self.top_k_passages = config['top_k_passages']
-        self.use_instructions = config['use_instructions'] or False
-
-        current_dataset = None
-        workshop_hf_name = "ylkhayat/{dataset_name}-generation-workshop"
-        if self.dataset == "clerc":
-            dataset_repo_name_prefix = "CLERC"
-            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
-            current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
-        if self.dataset == "echr":
-            dataset_repo_name_prefix = "ECHR"
-            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
-            current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
-        elif self.dataset == "echr_qa":
-            dataset_repo_name_prefix = "ECHR_QA"
-            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
-            url=f"https://huggingface.co/datasets/{workshop_hf_name}/resolve/main/{self.setup}/"
-            current_dataset = load_dataset("parquet", data_files={self.split: f"{url}{self.split}*.parquet"})[self.split]
-        assert current_dataset is not None, f"Dataset '{self.dataset}' not supported."
-        length_of_dataset = int(len(current_dataset) * self.dataset_percentage)
-
-        print(f"[!] dataset: '{workshop_hf_name}'")
-        print(f"[!] experiment num of records: {length_of_dataset}")
-
-        processed_dataset = current_dataset.select(range(length_of_dataset))
-        processed_dataset = processed_dataset.map(
+    def process_dataset(self, tokenizer: PreTrainedTokenizerBase, max_tokens: int = 512):
+        self.tokenizer = tokenizer
+        self.max_tokens = max_tokens
+        self.processed_dataset = self.processed_dataset.map(
             lambda record: self.preprocess_record(record,
                                                   top_k=self.top_k_passages,
                                                   method=self.method,
@@ -237,13 +214,13 @@ class ModelInputPreprocessor:
             batched=False,
             num_proc=num_proc
         )
-        processed_dataset = processed_dataset.flatten()
-        assert "meta.oracle_documents" in processed_dataset.column_names
+        self.processed_dataset = self.processed_dataset.flatten()
+        assert "meta.oracle_documents" in self.processed_dataset.column_names
         try:
-            processed_dataset = processed_dataset.rename_column("appno", "docid")
+            self.processed_dataset = self.processed_dataset.rename_column("appno", "docid")
         except:
             pass
-        return processed_dataset
+        return self.processed_dataset, self.current_dataset
     
     
 

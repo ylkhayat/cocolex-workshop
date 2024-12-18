@@ -17,7 +17,7 @@ class KNNLM:
         # print(f"[!] optimized KNNLM is initialized with model: {model_name}")
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-        self.model = torch.compile(self.model)
+        # self.model = torch.compile(self.model)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, truncation_side='left', use_fast=True)
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -133,17 +133,19 @@ class KNNLM:
         # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
-
-    def compute_knn_probs(self, batch_datastores, query, k=10, temperature=1.0):
-        batch_size = query.shape[0]
+    def compute_knn_probs(self, batch_datastores, queries, k=10, temperature=1.0):
+        batch_size = len(queries)
         knn_probs_list = []
-        pad_idx = self.tokenizer.pad_token_id
         
         for i in range(batch_size):
+            current_query = queries[i]
+            if current_query.shape[0] == 0:
+                knn_probs_list.append(torch.zeros((1, self.model.config.vocab_size)))
+                continue
             current_batch_datastore = batch_datastores[i]
             nneighbors = current_batch_datastore['store']
             values = current_batch_datastore['values'].reshape(-1)
-            query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
+            query_flat = current_query.reshape(-1, current_query.shape[-1]).cpu().numpy()
 
             distances, indices = nneighbors.kneighbors(query_flat)
             logits = 50 / distances
@@ -295,6 +297,8 @@ class KNNLM:
         unfinished_sents = input_ids.new(batch_size).fill_(1)
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
         generated_tokens = [[] for _ in range(batch_size)] 
+        insignificant_query_tokens = {self.tokenizer.pad_token_id, self.tokenizer.eos_token_id}
+        insignificant_query_tokens.update(self.tokenizer.encode('\n'))
 
         entropies_history = [previous_lambda]
         lamba_history = [previous_lambda]
@@ -336,12 +340,18 @@ class KNNLM:
                 
                 # final_input_ids = input_ids if "context" not in variant else input_ids_with_contexts
                 # is_last_input_id_pad = final_input_ids[:, -1].item() == self.tokenizer.pad_token_id
-                
+                filtered_queries_per_batch = []
                 query_to_knn = outputs_hidden_states[datastore_from_layer_index][:, -1:, :]
-                # query_to_knn = [] if is_last_input_id_pad else query_to_knn
-                # if len(query_to_knn) == 0:
-                    # print('aheh')
-                knn_next_token_probs = self.compute_knn_probs(batch_datastores, query_to_knn, k=k, temperature=temperature)
+                for batch_idx in range(batch_size):
+                    last_token = input_ids_with_contexts[batch_idx, -1]
+                    if last_token.item() not in insignificant_query_tokens:
+                        filtered_queries_per_batch.append(query_to_knn[batch_idx])
+                    else:
+                        filtered_queries_per_batch.append(torch.tensor([]))
+                        
+                        
+                # filtered_query_to_knn = [query for query, token in zip(query_to_knn, input_ids_with_contexts[:, -1]) if token.item() not in insignificant_query_tokens]
+                knn_next_token_probs = self.compute_knn_probs(batch_datastores, filtered_queries_per_batch, k=k, temperature=temperature)
                 
                 
                 original_dtype = final_token_logits.dtype
@@ -383,6 +393,7 @@ class KNNLM:
                     if unfinished_sents[i] == 1:
                         generated_tokens[i].append(token)
                     if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id:
+                        print(f"[!] detected EOS token at {cur_len} for {i}")
                         if cur_len > min_length:
                             unfinished_sents[i] = 0
                             sent_lengths[i] = cur_len

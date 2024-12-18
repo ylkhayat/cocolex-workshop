@@ -178,9 +178,12 @@ class CAD:
                 top_k_value: int = 20,
                 use_repetition_penalty: bool = False, 
                 repetition_penalty_value: float = 1.0,
-                temperature: float = 1.0
+                temperature: float = 1.0,
+                min_length_ratio: float = 0.1,
                 ) -> List[List[int]]:
         self.model.eval()
+        min_length = int(min_length_ratio * max_length)
+
         eos_token_id = self.tokenizer.eos_token_id
         # Tokenize 'prompts' and create attention masks
         tokenized_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
@@ -217,7 +220,6 @@ class CAD:
         alpha_tr = torch.full((batch_size, 1), alpha if alpha is not None else 0.0, device=self.device)
         unfinished_sents = input_ids_with_contexts.new(batch_size).fill_(1)
         sent_lengths = input_ids_with_contexts.new(batch_size).fill_(max_length)
-        min_length = max_length // 2  # 25% of the max length
 
         generated_tokens = [[] for _ in range(batch_size)] # e.g., [[4132, 102, 29402], [2378, 7893, 23001]]
 
@@ -303,19 +305,14 @@ class CAD:
 
                 for i, token in enumerate(next_token.tolist()):
                     if unfinished_sents[i] == 1:
-                        # if token == self.tokenizer.pad_token_id:
-                        #     continue
                         generated_tokens[i].append(token)
                     if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id:
-                        unfinished_sents[i] = 0
-                        sent_lengths[i] = cur_len
+                        if cur_len > min_length:
+                            unfinished_sents[i] = 0
+                            sent_lengths[i] = cur_len
 
                 if unfinished_sents.max() == 0:
                     break
-            #     pbar.update(1)
-            # pbar.close()
-
-        # Return the generated tokens
         return generated_tokens
 
 

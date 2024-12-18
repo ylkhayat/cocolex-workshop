@@ -18,14 +18,14 @@ run_mode=${2:-all}
 variant_mode=${3:-all}
 
 models=(
+    # meta-llama/Llama-3.1-8B-Instruct
     # Equall/Saul-7B-Instruct-v1 
-    meta-llama/Llama-3.1-8B-Instruct
-    # mistralai/Mistral-7B-Instruct-v0.3
+    mistralai/Mistral-7B-Instruct-v0.3
     )
 setups=(
-    bm25_oracle_passages_oracle_documents 
+    # bm25_oracle_passages_oracle_documents 
     bm25_relevant_passages_oracle_documents 
-    bm25_noisy_oracle_passages_oracle_documents
+    # bm25_noisy_oracle_passages_oracle_documents
     # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
     # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
     )
@@ -41,11 +41,11 @@ knnlm_variants=(
     # context_adacad_plus
     )
 datasets=(
-    # clerc
-    echr_qa
+    clerc
+    # echr_qa
     )
-dataset_percentage=0.1
-# dataset_percentage=1.0
+# dataset_percentage=0.1
+dataset_percentage=1.0
 
 # Function to wait for an available GPU
 wait_for_gpu() {
@@ -126,6 +126,7 @@ for dataset in "${datasets[@]}"; do
     for instructed in "${instructions[@]}"; do
         for model in "${models[@]}"; do
             for setup in "${setups[@]}"; do
+                common_suffix="$(echo "$setup" | awk -F'_' '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))}1' OFS='')_$(echo "$dataset" | tr '[:lower:]' '[:upper:]')_$(echo "$model" | awk -F'/' '{print toupper(substr($2,1,1))}')"
                 extra_info=""
                 if [ "$instructed" -eq 1 ]; then
                     extra_info="[instructed]"
@@ -142,7 +143,7 @@ for dataset in "${datasets[@]}"; do
                                 --use_instructions \"$instructed\""
                     # should_run=$(check_experiment "./run_experiments_rag.sh" "$python_args")
                     if [[ $should_run -eq 0 ]]; then
-                        window_name="rag_${setup}"
+                        window_name="rag_${common_suffix}"
                         if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
                             gpu=$(wait_for_gpu)
                             log_new_experiment "RAG" "$extra_info"
@@ -168,7 +169,7 @@ for dataset in "${datasets[@]}"; do
                                     --use_instructions \"$instructed\""
                         # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                         if [ $should_run -eq 0 ]; then
-                            window_name="cad_${setup}_${strategy}"
+                            window_name="cad_${common_suffix}_${strategy}"
                             if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
                                 gpu=$(wait_for_gpu)
                                 log_new_experiment "CAD" "$extra_info[$strategy]"
@@ -207,7 +208,7 @@ for dataset in "${datasets[@]}"; do
                                         --variant \"$knn_variant\""
                             # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                             if [ $should_run -eq 0 ]; then
-                                window_name="knn_${setup}_${knn_method}_${knn_variant}"
+                                window_name="knn_${common_suffix}_${knn_method}_${knn_variant}"
                                 if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
                                     gpu=$(wait_for_gpu)
                                     log_new_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"

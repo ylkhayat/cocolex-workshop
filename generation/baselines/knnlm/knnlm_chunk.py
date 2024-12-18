@@ -1,4 +1,4 @@
-from more_itertools import chunked
+from more_itertools import chunked, windowed
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -63,7 +63,7 @@ class KNNLM:
     
     def construct_datastore_plus(self,
                                     context_texts: List[List[str]],
-                                    overlap:float,
+                                    overlap:int,
                                     layer_index=-1,
                                     k=10):
         assert overlap >= 0.0 and overlap <= 1.0, "Overlap must be between [0, 1]"
@@ -106,9 +106,8 @@ class KNNLM:
     def construct_datastore_individually(self,
                                     context_texts: List[str],
                                     layer_index=-1,
+                                    c=3,
                                     k=10):
-        # print(f"[!] constructing datastore: {layer_index}")
-        begin_time = time.process_time()
         batch_datastores = []
         for text in context_texts:
             single_input = self.tokenizer(text,
@@ -123,14 +122,19 @@ class KNNLM:
             next_tokens = single_input['input_ids'][:, 1:]
             keys = hidden_states[0].detach().cpu().numpy()
             values = next_tokens[0].detach().cpu().numpy()
+            chunked_values = windowed(values, c, fillvalue=self.tokenizer.pad_token_id)
+            chunked_values = [np.array(chunk) for chunk in chunked_values]
+            chunked_values_rep = [[hidden_states[0][i + j].detach().cpu().numpy() for j, _ in enumerate(chunk)] for i, chunk in enumerate(chunked_values)]
+            assert len(chunked_values) == len(chunked_values_rep), "Chunks and chunked representations must have the same length"
+            assert len(chunked_values[0]) == len(chunked_values_rep[0]) and len(chunked_values[0]) == c, "Chunks and chunked representations must have the same length"
+            assert len(chunked_values_rep[0][0]) == self.model.config.hidden_size, "Representation must have the same size as hidden states"
             nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
             nneighbors.fit(keys)
             batch_datastores.append({
                 'store': nneighbors,
-                'values': values
+                'values_tokens': chunked_values,
+                'values_rep': chunked_values_rep
             })
-        elapsed_time = time.process_time() - begin_time
-        # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
 
@@ -241,15 +245,13 @@ class KNNLM:
                 top_p_value: float = 0.9,
                 top_k_value: int = 20,
                 k: int = 10,
+                c: int = 10,
                 datastore_from_layer_index: int = -1,
                 use_repetition_penalty: bool = False, 
                 repetition_penalty_value: float = 1.0,
                 temperature: float = 1.0,
-                min_length_ratio: float = 0.1,
                 ) -> List[List[int]]:
         self.model.eval()
-        min_length = int(min_length_ratio * max_length)
-
         if 'plus' in variant:
             batch_datastores = self.construct_datastore_plus(references,
                                                              overlap=0.5,
@@ -258,6 +260,7 @@ class KNNLM:
         else:
             batch_datastores = self.construct_datastore_individually(references,
                                                                      layer_index=datastore_from_layer_index,
+                                                                     c=c,
                                                                      k=k) 
             
             
@@ -383,9 +386,8 @@ class KNNLM:
                     if unfinished_sents[i] == 1:
                         generated_tokens[i].append(token)
                     if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id:
-                        if cur_len > min_length:
-                            unfinished_sents[i] = 0
-                            sent_lengths[i] = cur_len
+                        unfinished_sents[i] = 0
+                        sent_lengths[i] = cur_len
                 if unfinished_sents.max() == 0:
                     break
 

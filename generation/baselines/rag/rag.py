@@ -1,4 +1,3 @@
-# %%
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import Union, List
@@ -8,6 +7,7 @@ import sys
 import torch
 import torch.nn.functional as F
 import transformers
+import ipdb
 
 print(f"Python Version : {sys.version}")
 print(f"Torch Version : {torch.__version__}")
@@ -124,9 +124,11 @@ class RAG:
                 top_k_value: int = 20,
                 use_repetition_penalty: bool = False, 
                 repetition_penalty_value: float = 1.0,
-                temperature: float = 1.0
+                temperature: float = 1.0,
+                min_length_ratio: float = 0.1,
                 ) -> List[List[int]]:
         self.model.eval()
+        min_length = int(min_length_ratio * max_length)
         
         tokenized_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
         tokenized_inputs = {key: value.to(self.model.device) for key, value in tokenized_inputs.items()}
@@ -174,15 +176,12 @@ class RAG:
                     if unfinished_sents[i] == 1:
                         generated_tokens[i].append(token)
                     if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id:
-                        unfinished_sents[i] = 0
-                        sent_lengths[i] = cur_len
+                        if cur_len > min_length:
+                            unfinished_sents[i] = 0
+                            sent_lengths[i] = cur_len
 
                 if unfinished_sents.max() == 0:
                     break
-            #     pbar.update(1)
-            # pbar.close()
-
-        # Return the generated tokens
         return generated_tokens
 
 
