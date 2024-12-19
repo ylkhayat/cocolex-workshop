@@ -1,4 +1,6 @@
 from datasets import load_dataset, DatasetDict
+from more_itertools import windowed
+from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 import argparse
@@ -7,56 +9,183 @@ import faiss
 import json
 import numpy as np
 import os
+import Stemmer 
 import torch
 
-top_k = 10
+stemmer = Stemmer.Stemmer("english")
 
-# encoder_name = "jhu-clsp/LegalBERT-DPR-CLERC-ft"
-encoder_name = "jhu-clsp/BERT-DPR-CLERC-ft"
-tokenizer = AutoTokenizer.from_pretrained(encoder_name, truncation_side='left')
-model = AutoModel.from_pretrained(encoder_name)
-# model = torch.compile(model)
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+top_k = 50
+
+default_create = True
+chunk_size = 400
+chunk_overlap = 0.5
+
+num_proc = os.cpu_count() - 3
+
+dataset = "cuad"
+
+key_field = "docid"
+if dataset == "clerc":
+    original_dataset = load_dataset("jhu-clsp/CLERC", data_files={"train": f"generation/train.jsonl",  "test": f"generation/test.jsonl"})
+    workshop_hf_name = f"CLERC-generation-workshop"
+elif dataset == "echr":
+    workshop_hf_name = f"ECHR-generation-workshop"
+elif dataset == "echr_qa":
+    workshop_hf_name = f"ECHR_QA-generation-workshop"
+elif dataset == "obli_qa":
+    workshop_hf_name = f"OBLI_QA-generation-workshop"
+elif dataset == "cuad":
+    workshop_hf_name = f"CUAD-generation-workshop"
+else:
+    raise ValueError("Invalid dataset")
+current_chosen_dataset = load_dataset(f"ylkhayat/{workshop_hf_name}", data_dir="data")
+
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+
+def chunk_document_into_passages(document_id: str, text: str, max_len: int = 300, overlap: float = 0.0):
+    if max_len <= 0:
+        raise ValueError("max_len must be a positive integer")
+    if not (0 <= overlap < 1):
+        raise ValueError("overlap must be between 0 (inclusive) and 1 (exclusive)")
+    chunks = []
+    words = text.split(" ")
+    chunked_words = windowed(words, max_len, fillvalue="", step=int(max_len * (1 - overlap)))
+    for chunk in chunked_words:
+        chunks.append([document_id, " ".join(chunk).strip()])
+    return chunks
+
+def chunk_citations(record, chunk_size=chunk_size, chunk_overlap=chunk_overlap):
+    chunks = []
+    for citation_id, citation in record['citations']:
+        chunks.extend(chunk_document_into_passages(citation_id, citation, max_len=chunk_size, overlap=chunk_overlap))
+    return chunks
+
+print(json.dumps(chunk_citations(current_chosen_dataset['test'][0]), indent=4))
+
+create = default_create
+if create or 'oracle_documents_passages' not in current_chosen_dataset.column_names['train'] or 'oracle_documents_passages' not in current_chosen_dataset.column_names['test']:
+    print(f"[*] adding oracle_documents_passages to {workshop_hf_name}")
+    # Use parallel processing with num_proc if dataset is large. Increase num_proc as needed.
+    current_chosen_dataset = current_chosen_dataset.map(
+        lambda record: {'oracle_documents_passages': chunk_citations(record)},
+        num_proc=num_proc
+    )
+else:
+    print(f"[!] oracle_documents_passages already exists in {workshop_hf_name}")
+
+columns_to_select = [key_field, 'previous_text', 'gold_text', 'citations', 'oracle_documents_passages']
+# columns_to_select += [col for col in current_chosen_dataset['test'].column_names if col.startswith('top_')]
+current_chosen_dataset = current_chosen_dataset.select_columns(columns_to_select)
+current_chosen_dataset.push_to_hub(workshop_hf_name, data_dir="data")
+
+
+
+# data_dir = "bm25_oracle_passages_oracle_documents"
+
+# from datasets import DatasetDict
+
+
+# create = False
+# def retrieve_top_passages(entry):
+#     query = entry['gold_text']
+#     all_passages = entry['oracle_documents_passages']
+#     all_passages_text = [f"{passage_arr[0]}\n{passage_arr[1]}" for passage_arr in all_passages]
+#     corpus_tokens = bm25s.tokenize(all_passages_text, stopwords="en", stemmer=stemmer)
+#     retriever = bm25s.BM25()
+#     retriever.index(corpus_tokens)
+#     query_tokens = bm25s.tokenize(query, stemmer=stemmer)
+#     local_top_k = top_k if top_k <= len(all_passages_text) else len(all_passages_text)
+#     results, _ = retriever.retrieve(query_tokens, corpus=all_passages_text, k=local_top_k)
+#     results = results.squeeze(0)
+#     return {f"top_{top_k}_passages": results}  
+# try:
+#     if not create:
+#         new_dataset = load_dataset(f"ylkhayat/{workshop_hf_name}", data_dir=data_dir)
+# except:
+#     print(f"[!] {workshop_hf_name} not found in {data_dir}")
+#     create = True
+
+# if create or f"top_{top_k}_passages" not in current_chosen_dataset.column_names['test']:
+#     print(f"[*] adding top_{top_k}_passages to {workshop_hf_name}")
+#     new_dataset = DatasetDict({split: current_chosen_dataset[split] for split in current_chosen_dataset.keys()})
+#     new_dataset = new_dataset.map(retrieve_top_passages, num_proc=num_proc)
+#     new_dataset.push_to_hub(f"ylkhayat/{workshop_hf_name}", data_dir=data_dir)
+# else:
+#     print(f"[!] top_{top_k}_passages already exists in {workshop_hf_name}")
+# print(json.dumps(new_dataset['test'][0][f"top_{top_k}_passages"][0], indent=4)) 
+
+
+data_dir = "bm25_relevant_passages_oracle_documents"
+
+create = default_create
+def retrieve_top_passages(entry):
+    query = entry['previous_text']
+    all_passages = entry['oracle_documents_passages']
+    all_passages_text = [f"{passage_arr[0]}\n{passage_arr[1]}" for passage_arr in all_passages]
+    corpus_tokens = bm25s.tokenize(all_passages_text, stopwords="en", stemmer=stemmer)
+    retriever = bm25s.BM25()
+    retriever.index(corpus_tokens)
+    query_tokens = bm25s.tokenize(query, stemmer=stemmer)
+    local_top_k = top_k if top_k <= len(all_passages_text) else len(all_passages_text)
+
+    results, _ = retriever.retrieve(query_tokens, corpus=all_passages_text, k=local_top_k)
+    results = results.squeeze(0)
+    return {f"top_{top_k}_passages": results}  
+
+try:
+    if not create:
+        new_dataset = load_dataset(f"ylkhayat/{workshop_hf_name}", data_dir=data_dir)
+except:
+    print(f"[!] {workshop_hf_name} not found in {data_dir}")
+    create = True
+    
+if create or f"top_{top_k}_passages" not in current_chosen_dataset.column_names['train'] or f"top_{top_k}_passages" not in current_chosen_dataset.column_names['test']:
+    print(f"[*] adding top_{top_k}_passages to {workshop_hf_name}")
+    new_dataset = DatasetDict({split: current_chosen_dataset[split] for split in current_chosen_dataset.keys()})
+    new_dataset = new_dataset.map(retrieve_top_passages, num_proc=num_proc)
+    new_dataset.push_to_hub(f"ylkhayat/{workshop_hf_name}", data_dir=data_dir)
+else:
+    print(f"[!] top_{top_k}_passages already exists in {workshop_hf_name}")
+print(json.dumps(new_dataset['test'][0][f"top_{top_k}_passages"][0], indent=4)) 
+
+
+
+
+encoder_name = 'sentence-transformers/all-MiniLM-L6-v2'
+model = SentenceTransformer(encoder_name)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 clean_encoder_name = encoder_name.replace("/", "_")
 data_dir = "dense_relevant_passages_oracle_documents"
-# data_dir = "dense_oracle_passages_oracle_documents"
 data_dir = f"{data_dir}/{clean_encoder_name}"
 
 print(f"[!] data_dir: {data_dir}")
 
 num_proc = os.cpu_count()
+# def normalize_embeddings(embeddings):
+#     return embeddings / torch.norm(embeddings, p=2, dim=1, keepdim=True)
 
-current_workshop_hf_name = f"ECHR-generation-workshop"
-current_dataset = load_dataset(f"ylkhayat/{current_workshop_hf_name}")
-
-def normalize_embeddings(embeddings):
-    return embeddings / torch.norm(embeddings, p=2, dim=1, keepdim=True)
-
-# def embed_texts_pooler(texts):
+# def embed_texts(texts):
 #     inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=model.config.max_position_embeddings).to(device)
+#     attention_mask = inputs['attention_mask']
 #     with torch.no_grad():
-#         embeddings = model(**inputs).pooler_output
+#         token_embeddings = model(**inputs).last_hidden_state
+#         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+#         sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, dim=1)
+#         sum_mask = torch.clamp(input_mask_expanded.sum(dim=1), min=1e-9)
+#         embeddings = sum_embeddings / sum_mask
 #     embeddings = normalize_embeddings(embeddings).cpu().numpy()
 #     return embeddings
 
-def embed_texts(texts):
-    inputs = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=model.config.max_position_embeddings).to(device)
-    attention_mask = inputs['attention_mask']
-    with torch.no_grad():
-        token_embeddings = model(**inputs).last_hidden_state
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, dim=1)
-        sum_mask = torch.clamp(input_mask_expanded.sum(dim=1), min=1e-9)
-        embeddings = sum_embeddings / sum_mask
-    embeddings = normalize_embeddings(embeddings).cpu().numpy()
-    return embeddings
-
 
 def search_with_embeddings(all_queries, all_passages_text, all_passages_text_with_ids):
-    query_embeddings = embed_texts(all_queries)
-    passage_embeddings = embed_texts(all_passages_text)
+    # query_embeddings = embed_texts(all_queries)
+    query_embeddings = model.encode(all_queries)
+    # passage_embeddings = embed_texts(all_passages_text)
+    passage_embeddings = model.encode(all_passages_text)
     dim = passage_embeddings.shape[1]
     index = faiss.IndexFlatIP(dim)
     index.add(passage_embeddings)
@@ -76,18 +205,16 @@ def retrieve_top_passages_batch(entries):
     _, _, top_passages_batch = search_with_embeddings(all_queries, all_passages_text, all_passages_text_with_ids)
     return {f"top_{top_k}_passages": top_passages_batch}
 
-create = True
-    
-
-if create or f"top_{top_k}_passages" not in current_dataset.column_names['train'] or f"top_{top_k}_passages" not in current_dataset.column_names['test']:
-    print(f"[*] adding top_{top_k}_passages to {current_workshop_hf_name}")
-    new_current_dataset = DatasetDict({split: current_dataset[split] for split in current_dataset.keys()})
-    new_current_dataset = new_current_dataset.map(
+create = default_create
+if create or f"top_{top_k}_passages" not in current_chosen_dataset.column_names['train'] or f"top_{top_k}_passages" not in current_chosen_dataset.column_names['test']:
+    print(f"[*] adding top_{top_k}_passages to {workshop_hf_name}")
+    new_current_chosen_dataset = DatasetDict({split: current_chosen_dataset[split] for split in current_chosen_dataset.keys()})
+    new_current_chosen_dataset = new_current_chosen_dataset.map(
         lambda batch: retrieve_top_passages_batch(batch),
         batched=True,
         batch_size=4
     )
-    new_current_dataset.push_to_hub(f"ylkhayat/{current_workshop_hf_name}", data_dir=data_dir)
+    new_current_chosen_dataset.push_to_hub(f"ylkhayat/{workshop_hf_name}", data_dir=data_dir)
 else:
-    print(f"[!] top_{top_k}_passages already exists in {current_workshop_hf_name}")
-print(json.dumps(new_current_dataset['train'][0][f"top_{top_k}_passages"][0], indent=4))
+    print(f"[!] top_{top_k}_passages already exists in {workshop_hf_name}")
+print(json.dumps(new_current_chosen_dataset['train'][0][f"top_{top_k}_passages"][0], indent=4))
