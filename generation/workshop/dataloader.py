@@ -1,5 +1,5 @@
 from transformers import PreTrainedTokenizerBase
-from dataloader_extras import (
+from .dataloader_extras import (
     dataset_to_system_prompt,
     dataset_to_context_prefix,
     dataset_to_prompt_prefix,
@@ -30,7 +30,7 @@ class TextSection:
         if self.truncated_before:
             raise ValueError("[!] section already truncated!")
         if num_tokens >= len(self.tokenized_text):
-            raise ValueError("[!] this should not happen!")
+            raise ValueError(f"[!] this should not happen for text section '{self.name}' with priority {self.priority}!")
         self.truncated_before = True
         self.tokenizer.truncation_side = 'left'
         input_ids = self.tokenizer.encode(self.text, truncation=False, add_special_tokens=False)
@@ -79,8 +79,19 @@ class ModelInputPreprocessor:
             dataset_repo_name_prefix = "CLERC"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
-        if self.dataset == "echr":
+        elif self.dataset == "echr":
             dataset_repo_name_prefix = "ECHR"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        elif self.dataset == "cuad":
+            if 'oracle_passages' in self.setup:
+                print("[!] oracle passages data not supported for CUAD.")
+                sys.exit(0)
+            dataset_repo_name_prefix = "CUAD"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        elif self.dataset == "obli_qa":
+            dataset_repo_name_prefix = "OBLI_QA"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "echr_qa":
@@ -125,7 +136,7 @@ class ModelInputPreprocessor:
         prompt_prefix_section = TextSection("prompt_prefix", prompt_prefix, priority=0, tokenizer=self.tokenizer)
         prompt_suffix = self.dataset_to_prompt_suffix[self.dataset]
         prompt_suffix_section = TextSection("prompt_suffix", prompt_suffix, priority=0, tokenizer=self.tokenizer)
-        prompt_section = TextSection("prompt", prompt, priority=2, tokenizer=self.tokenizer)
+        prompt_section = TextSection("prompt", prompt, priority=1, tokenizer=self.tokenizer)
         building_sections = []
         if method == "rag" or method == "cad" or "context" in method:
             building_sections.append([context_prefix_section, _get_copy(prefix_linker_section)])

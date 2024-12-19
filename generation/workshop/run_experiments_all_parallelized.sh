@@ -41,9 +41,12 @@ knnlm_variants=(
     # context_adacad_plus
     )
 datasets=(
+    # obli_qa
+    # cuad
     clerc
     # echr_qa
     )
+# dataset_percentage=0.01
 # dataset_percentage=0.1
 dataset_percentage=1.0
 
@@ -149,7 +152,7 @@ for dataset in "${datasets[@]}"; do
                             log_new_experiment "RAG" "$extra_info"
                             tmux new-window -t "$session_name" -n "$window_name" \
                                 "./run_experiments_rag.sh $python_args --device $gpu; \
-                                if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                                tmux kill-window -t \"\${session_name}:$window_name\";"
                             sleep 18
                         else
                             log_skip_experiment "RAG" "$extra_info"
@@ -175,7 +178,7 @@ for dataset in "${datasets[@]}"; do
                                 log_new_experiment "CAD" "$extra_info[$strategy]"
                                 tmux new-window -t "$session_name" -n "$window_name" \
                                     "./run_experiments_cad.sh $python_args --device $gpu; \
-                                    if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                                    tmux kill-window -t \"\${session_name}:$window_name\";"
                                 sleep 18
                             else
                                 log_skip_experiment "CAD" "$extra_info[$strategy]"
@@ -214,7 +217,7 @@ for dataset in "${datasets[@]}"; do
                                     log_new_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"
                                     tmux new-window -t "$session_name" -n "$window_name" \
                                         "./run_experiments_knnlm.sh $python_args --device $gpu; \
-                                        if [ \$? -eq 1 ]; then read; else tmux kill-window -t \"\${session_name}:$window_name\"; fi"
+                                        tmux kill-window -t \"\${session_name}:$window_name\";"
                                     sleep 18
                                 else
                                     log_skip_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"

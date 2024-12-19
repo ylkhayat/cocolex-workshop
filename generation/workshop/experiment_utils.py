@@ -44,7 +44,7 @@ def build_args_parser(method):
     parser.add_argument("--setup", type=str, default="bm25_oracle_passages_oracle_documents")
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--strategy", type=str, choices=['constant', 'entropy', 'adacad'], default='constant')
-    parser.add_argument("--top_k_passages", type=int, default=6)
+    parser.add_argument("--top_k_passages", type=int, default=10)
     parser.add_argument("--use_instructions", type=int, default=0)
     parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
     args = parser.parse_args()
@@ -53,6 +53,10 @@ def build_args_parser(method):
         args.max_new_tokens = 300
     elif 'clerc' in args.dataset:
         args.max_new_tokens = 200
+    elif 'obli_qa' in args.dataset:
+        args.max_new_tokens = 200
+    elif 'cuad' in args.dataset:
+        args.max_new_tokens = 100
     elif 'echr' in args.dataset:
         args.max_new_tokens = 300
         
@@ -304,15 +308,32 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
         correctness = alignscorer.score(contexts=references, claims=predictions)
         evaluation["align_score"]["correctness"] = average_scores(correctness)
     
+    def faithfulness_filterer(current_predictions):
+        if args.dataset == "cuad":
+            print("[!] filtering for faithfulness")
+            filtered_data = [
+                (prediction, oracle_document, top_k_passage) for prediction, oracle_document, top_k_passage in zip(current_predictions, oracle_documents, top_k_passages)
+                if "No Highlights" not in prediction
+            ]
+            filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = map(list, zip(*filtered_data))
+            print(f"[!] neglecting {len(current_predictions) - len(filtered_predictions)} records for faithfulness which had 'No Highlights'")
+            return filtered_predictions, filtered_oracle_documents, filtered_top_k_passages
+        print("[!] no filtering for faithfulness")
+        return current_predictions, oracle_documents, top_k_passages
+    
     if not has_align_score_faithfulness_documents and not has_align_score_faithfulness_passages:
         evaluation["align_score"]["faithfulness"] = {}
+        
+    filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = faithfulness_filterer(predictions)
+    assert len(filtered_predictions) == len(filtered_oracle_documents) == len(filtered_top_k_passages), "Lengths do not match"
+    
     if not has_align_score_faithfulness_documents:
         print("[!] using oracle documents for faithfulness")
-        faithfulness_documents = alignscorer.score(contexts=oracle_documents, claims=predictions)
+        faithfulness_documents = alignscorer.score(contexts=filtered_oracle_documents, claims=filtered_predictions)
         evaluation["align_score"]["faithfulness"]["documents"] = average_scores(faithfulness_documents)
     if not has_align_score_faithfulness_passages:
         print("[!] using top k passages for faithfulness")
-        faithfulness_passages = alignscorer.score(contexts=top_k_passages, claims=predictions)
+        faithfulness_passages = alignscorer.score(contexts=filtered_top_k_passages, claims=filtered_predictions)
         evaluation["align_score"]["faithfulness"]["passages"] = average_scores(faithfulness_passages)
     
     return evaluation
