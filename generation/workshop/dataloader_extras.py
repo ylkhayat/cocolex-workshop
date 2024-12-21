@@ -3,10 +3,7 @@ dataset_to_system_prompt = {
     "echr_qa": "You are an ECHR legal expert tasked to answer a question.",
     "cuad": (
         "You are a helpful legal professional analyzing clauses in a contract. "
-        "Your goal is to identify specific clauses that best suit the task. "
-        "Your answer must start with 'Highlights:\\n' and then list the exact contract text segments that "
-        "are relevant, and nothing else. "
-        "If no relevant text is found, respond with 'No Highlights'."
+        "Answer the following question based on the following contract. Please output No relevant information in the contract, if the answer to question is not present in contract."
     ),
     "obli_qa": (
         "You are a regulatory compliance and legal expert reviewing regulatory documents. "
@@ -28,20 +25,17 @@ dataset_to_context_prefix = {
         "Valid citation formats: [{single_retrieved_id}] or [{joined_retrieved_ids}]. "
     ),
     "cuad": (
-        "Below are contract excerpts. Identify and highlight the clauses related to the given category. "
-        "If a clause is relevant, include it under 'Highlights:' as it appears. "
-        "If no clauses match, write 'No Highlights'."
+        "Below are the only contract clauses that serve as your knowledge base."
     ),
     "obli_qa": (
-        "Below are regulatory documents. Extract only the portions of text that are relevant to the user's question. "
-        "Do not answer or explain, just quote relevant text directly."
+        "Below are the only regulatory documents that serve as your knowledge base."
     ),
 }
 
 dataset_to_prompt_prefix = {
     "clerc": (
         "Continue to write the following case in the style of my writeup. Your answer should range "
-        "from 100 to 400 words. Make your answer concise, and avoid redundant languages and assumptions. "
+        "from 100 to 400 words. Make your answer concise, and avoid redundant language and assumptions. "
         "Below is what I have written so far:"
     ),
     "echr_qa": (
@@ -54,8 +48,7 @@ dataset_to_prompt_prefix = {
         "Question: "
     ),
     "cuad": (
-        "Do not provide any commentary or explanations. "
-        "Only output 'Highlights:\\n' followed by the exact text segments or 'No Highlights'."
+        "Answer the following prompt based on the above contract."
     ),
     "obli_qa": (
         "Question: "
@@ -67,6 +60,17 @@ dataset_to_prompt_prefix = {
 dataset_to_prompt_suffix = {
     "clerc": "",
     "echr_qa": "\nAnswer: ",
-    "cuad": "",
-    "obli_qa": ""
+    "cuad": (
+        "\n"
+        "If no relevant text explicitly addressing the category is found, respond only with 'No relevant information found in the document.' "
+        "Otherwise, begin your response with 'Highlights:\\n' followed by the exact text segments as they appear in the contract."
+        "\n"
+        "Answer: "
+    ),
+    "obli_qa": (
+        "\n"
+        "Answer the question through providing the exact relevant text segments as they appear in the regulatory document. "
+        "\n"
+        "Answer: "
+    )
 }

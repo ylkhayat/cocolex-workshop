@@ -1,3 +1,4 @@
+import ipdb
 from more_itertools import chunked
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
@@ -35,16 +36,19 @@ class KNNLM:
         chunks = []
         step = int(max_length * (1 - overlap))
         last_index = 0
-        for i in range(0, len(tokens) - max_length + step, step):
-            if i == 0:
-                split = tokens[i:i+max_length]
-                splits = (split, 0)
-                last_index = i+max_length
-            else:
-                split = tokens[last_index-step: last_index+step]
-                splits = (split, len(split) - step - 1) # -1 for the last key token
-                last_index = last_index+step
-            chunks.append(splits)
+        if len(tokens) <= max_length:
+            chunks.append((tokens, 0))
+        else:
+            for i in range(0, len(tokens) - max_length + step, step):
+                if i == 0:
+                    split = tokens[i:i+max_length]
+                    splits = (split, 0)
+                    last_index = i+max_length
+                else:
+                    split = tokens[last_index-step: last_index+step]
+                    splits = (split, len(split) - step - 1) # -1 for the last key token
+                    last_index = last_index+step
+                chunks.append(splits)
         return chunks
 
     def prepare_references_for_datastore(self,
@@ -87,7 +91,6 @@ class KNNLM:
                     for j in range(hidden_states.shape[0]):
                         keys.extend(hidden_states[j])
                         values.extend(next_tokens[j])
-            # print(f"[!] collected keys: {len(keys)}")
             keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
             values = np.array(values).reshape(-1)
             nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)

@@ -23,3 +23,6 @@ data
 *.txt
 generation/dataset-preparation/obli_qa/obliqa_documents.json
 *.json
+
+*.zip
+*.gz

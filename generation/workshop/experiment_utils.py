@@ -55,8 +55,10 @@ def build_args_parser(method):
         args.max_new_tokens = 200
     elif 'obli_qa' in args.dataset:
         args.max_new_tokens = 200
+        args.top_k_passages = 10
     elif 'cuad' in args.dataset:
-        args.max_new_tokens = 100
+        args.max_new_tokens = 50
+        args.top_k_passages = 10
     elif 'echr' in args.dataset:
         args.max_new_tokens = 300
         
@@ -215,9 +217,9 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     except Exception:
         evaluation = {}
         
-    # unfiltered_results_length = len(results)
-    # results = [result for result in results if len(result['gen'].strip()) > 20]
-    # print(f"[!] filtering results, filtered {unfiltered_results_length - len(results)} invalid results")
+    unfiltered_results_length = len(results)
+    results = [result for result in results if len(result['gen'].strip()) > 20]
+    print(f"[!] filtering results, filtered {unfiltered_results_length - len(results)} invalid results")
     # ipdb.set_trace()
     method = args.method
     print(f"[!] evaluation for method: {method}")
@@ -279,8 +281,14 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
         sentences = pipe(text)
         sentences = [sent['word'] for sent in sentences]
         return sentences
-    
-    
+    align_score_evaluation_mode_set = {
+        "correctness": align_score_evaluation_mode,
+        "faithfulness": align_score_evaluation_mode
+        }
+    if args.dataset == "cuad" or args.dataset == "obli_qa":
+        align_score_evaluation_mode_set["correctness"] = "nli"
+        align_score_evaluation_mode_set["faithfulness"] = "bin"
+        
     has_align_score_correctness = False
     has_align_score_faithfulness_documents = False
     has_align_score_faithfulness_passages = False
@@ -297,44 +305,64 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
         evaluation["align_score"] = {}
     if need_any_align_score:
         print(f"[!] using alignscore model evaluation mode: {align_score_evaluation_mode}")
-        alignscorer = AlignScore(model='roberta-large',
-                                batch_size=64,
-                                device=device,
-                                ckpt_path=align_score_model_to_use,
-                                evaluation_mode=align_score_evaluation_mode,
-                                sent_tokenize=sent_tokenize)
+        alignscorer = {}
+        for current_align_score_evaluation_mode in set(align_score_evaluation_mode_set.values()):
+            print(f"[!] loading alignscore model for {current_align_score_evaluation_mode}")
+            alignscorer[current_align_score_evaluation_mode] = AlignScore(model='roberta-large',
+                                                                        batch_size=64,
+                                                                        device=device,
+                                                                        ckpt_path=align_score_model_to_use,
+                                                                        evaluation_mode=current_align_score_evaluation_mode,
+                                                                        sent_tokenize=sent_tokenize)
     if not has_align_score_correctness:
+        print(f"[!] using '{align_score_evaluation_mode_set['correctness']}' for correctness")
         print("[!] using generated text for correctness")
-        correctness = alignscorer.score(contexts=references, claims=predictions)
+        proper_align_scorer = alignscorer[align_score_evaluation_mode_set["correctness"]]
+        correctness = proper_align_scorer.score(contexts=references, claims=predictions)
         evaluation["align_score"]["correctness"] = average_scores(correctness)
     
-    def faithfulness_filterer(current_predictions):
+    def faithfulness_filterer(current_references):
         if args.dataset == "cuad":
             print("[!] filtering for faithfulness")
             filtered_data = [
-                (prediction, oracle_document, top_k_passage) for prediction, oracle_document, top_k_passage in zip(current_predictions, oracle_documents, top_k_passages)
-                if "No Highlights" not in prediction
+                (current_reference, prediction, oracle_document, top_k_passage) for current_reference, prediction, oracle_document, top_k_passage in zip(current_references, predictions, oracle_documents, top_k_passages)
+                if "No relevant information" not in current_reference
             ]
-            filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = map(list, zip(*filtered_data))
-            print(f"[!] neglecting {len(current_predictions) - len(filtered_predictions)} records for faithfulness which had 'No Highlights'")
-            return filtered_predictions, filtered_oracle_documents, filtered_top_k_passages
+            if filtered_data:
+                filtered_references, filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = map(list, zip(*filtered_data))
+            else:
+                filtered_references, filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = [], [], [], []
+            print(f"[!] neglecting {len(current_references) - len(filtered_references)} records for faithfulness which had 'No relevant...'")
+            return filtered_references, filtered_predictions, filtered_oracle_documents, filtered_top_k_passages
         print("[!] no filtering for faithfulness")
-        return current_predictions, oracle_documents, top_k_passages
+        return current_references, predictions, oracle_documents, top_k_passages
     
     if not has_align_score_faithfulness_documents and not has_align_score_faithfulness_passages:
         evaluation["align_score"]["faithfulness"] = {}
         
-    filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = faithfulness_filterer(predictions)
+    _, filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = faithfulness_filterer(references)
     assert len(filtered_predictions) == len(filtered_oracle_documents) == len(filtered_top_k_passages), "Lengths do not match"
     
     if not has_align_score_faithfulness_documents:
         print("[!] using oracle documents for faithfulness")
-        faithfulness_documents = alignscorer.score(contexts=filtered_oracle_documents, claims=filtered_predictions)
-        evaluation["align_score"]["faithfulness"]["documents"] = average_scores(faithfulness_documents)
+        print(f"[!] using '{align_score_evaluation_mode_set['faithfulness']}' for faithfulness")
+        proper_align_scorer = alignscorer[align_score_evaluation_mode_set["faithfulness"]]
+        assert proper_align_scorer is not None, "Align scorer is None"
+        try:
+            faithfulness_documents = proper_align_scorer.score(contexts=filtered_oracle_documents, claims=filtered_predictions)
+            evaluation["align_score"]["faithfulness"]["documents"] = average_scores(faithfulness_documents)
+        except Exception as e:
+            print(f"[!] error in faithfulness documents: {e}")
+            evaluation["align_score"]["faithfulness"]["documents"] = 0.0
     if not has_align_score_faithfulness_passages:
-        print("[!] using top k passages for faithfulness")
-        faithfulness_passages = alignscorer.score(contexts=filtered_top_k_passages, claims=filtered_predictions)
-        evaluation["align_score"]["faithfulness"]["passages"] = average_scores(faithfulness_passages)
+        try:
+            assert proper_align_scorer is not None, "Align scorer is None"
+            print("[!] using top k passages for faithfulness")
+            faithfulness_passages = proper_align_scorer.score(contexts=filtered_top_k_passages, claims=filtered_predictions)
+            evaluation["align_score"]["faithfulness"]["passages"] = average_scores(faithfulness_passages)
+        except Exception as e:
+            print(f"[!] error in faithfulness passages: {e}")
+            evaluation["align_score"]["faithfulness"]["passages"] = 0.0
     
     return evaluation
 

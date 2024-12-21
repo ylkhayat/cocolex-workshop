@@ -35,15 +35,15 @@ knnlm_methods=(constant entropy)
 knnlm_variants=(
     # normal
     context 
-    # context_adacad 
+    context_adacad 
     # plus
     context_plus 
-    # context_adacad_plus
+    context_adacad_plus
     )
 datasets=(
-    # obli_qa
+    obli_qa
     # cuad
-    clerc
+    # clerc
     # echr_qa
     )
 # dataset_percentage=0.01
@@ -172,7 +172,7 @@ for dataset in "${datasets[@]}"; do
                                     --use_instructions \"$instructed\""
                         # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                         if [ $should_run -eq 0 ]; then
-                            window_name="cad_${common_suffix}_${strategy}"
+                            window_name="cad_${strategy}_${common_suffix}"
                             if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
                                 gpu=$(wait_for_gpu)
                                 log_new_experiment "CAD" "$extra_info[$strategy]"
@@ -191,13 +191,8 @@ for dataset in "${datasets[@]}"; do
 
                 if [[ "$run_mode" == "knnlm" || "$run_mode" == "all" ]]; then
                     for knn_method in "${knnlm_methods[@]}"; do
-                        # if [[ "$variant_mode" == "all" ]]; then
-                        #     knnlm_variants=$default_knnlm_variants
-                        # else
-                        #     knnlm_variants=($variant_mode)
-                        # fi
                         for knn_variant in "${knnlm_variants[@]}"; do
-                            if [[ "$knn_method" == "constant" && "$knn_variant" == "context_plus" ]]; then
+                            if [[ "$knn_method" == "constant" && ("$knn_variant" == *"adacad"* || "$knn_variant" == *"plus"*) ]]; then
                                 continue
                             fi
                             python_args="--model \"$model\" \
@@ -211,7 +206,7 @@ for dataset in "${datasets[@]}"; do
                                         --variant \"$knn_variant\""
                             # should_run=$(check_experiment "./run_experiments_cad.sh" "$python_args")
                             if [ $should_run -eq 0 ]; then
-                                window_name="knn_${common_suffix}_${knn_method}_${knn_variant}"
+                                window_name="knn_${knn_method}_${knn_variant}_${common_suffix}"
                                 if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
                                     gpu=$(wait_for_gpu)
                                     log_new_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"

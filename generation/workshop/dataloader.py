@@ -121,9 +121,9 @@ class ModelInputPreprocessor:
         ), f"Dataset '{self.dataset}' not supported."
         assert isinstance(contexts, list) and len(contexts) > 0, "Contexts must be a non-empty list of strings."
         retrieved_ids = [doc.split('\n')[0] for doc in contexts]
-        def _get_copy(section):
-            return copy.deepcopy(section)
-        prefix_linker_section = TextSection("prefix_linker", "\n\n", priority=0, tokenizer=self.tokenizer)
+        def get_copy_prefix_linker():
+            return TextSection("prefix_linker", "\n\n", priority=0, tokenizer=self.tokenizer)
+        prefix_linker_section = get_copy_prefix_linker()
         context_prefix = self.dataset_to_context_prefix[self.dataset].format(joined_retrieved_ids=', '.join(retrieved_ids), single_retrieved_id=retrieved_ids[0])
         context_prefix_section = TextSection("context_prefix", context_prefix, priority=0, tokenizer=self.tokenizer)
         context_sections = []
@@ -138,10 +138,10 @@ class ModelInputPreprocessor:
         prompt_suffix_section = TextSection("prompt_suffix", prompt_suffix, priority=0, tokenizer=self.tokenizer)
         prompt_section = TextSection("prompt", prompt, priority=1, tokenizer=self.tokenizer)
         building_sections = []
-        if method == "rag" or method == "cad" or "context" in method:
-            building_sections.append([context_prefix_section, _get_copy(prefix_linker_section)])
+        if method == "rag" or "cad" in method or "context" in method:
+            building_sections.append([context_prefix_section, get_copy_prefix_linker()])
             building_sections.append(context_sections)
-        building_sections.append([prompt_prefix_section, _get_copy(prefix_linker_section), prompt_section, prompt_suffix_section])
+        building_sections.append([prompt_prefix_section, get_copy_prefix_linker(), prompt_section, prompt_suffix_section])
         
         all_sections = [section for group in building_sections for section in group]
         all_sections_token_count = [section.token_count() for section in all_sections]

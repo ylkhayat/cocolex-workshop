@@ -30,7 +30,7 @@ class RAG:
     def __init__(self, model_name: str, device: Union[int,str] = 0):
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-        self.model = torch.compile(self.model)
+        # self.model = torch.compile(self.model)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side='left', truncation_side='left')
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
