@@ -286,7 +286,7 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
         "faithfulness": align_score_evaluation_mode
         }
     if args.dataset == "cuad" or args.dataset == "obli_qa":
-        align_score_evaluation_mode_set["correctness"] = "nli"
+        align_score_evaluation_mode_set["correctness"] = "bin"
         align_score_evaluation_mode_set["faithfulness"] = "bin"
         
     has_align_score_correctness = False
@@ -303,6 +303,7 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     need_any_align_score = not has_align_score_correctness or not has_align_score_faithfulness_documents or not has_align_score_faithfulness_passages
     if "align_score" not in evaluation:
         evaluation["align_score"] = {}
+        evaluation["align_score"]["meta"] = {}
     if need_any_align_score:
         print(f"[!] using alignscore model evaluation mode: {align_score_evaluation_mode}")
         alignscorer = {}
@@ -317,6 +318,7 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     if not has_align_score_correctness:
         print(f"[!] using '{align_score_evaluation_mode_set['correctness']}' for correctness")
         print("[!] using generated text for correctness")
+        evaluation["align_score"]["meta"]["correctness"] = align_score_evaluation_mode_set["correctness"]
         proper_align_scorer = alignscorer[align_score_evaluation_mode_set["correctness"]]
         correctness = proper_align_scorer.score(contexts=references, claims=predictions)
         evaluation["align_score"]["correctness"] = average_scores(correctness)
@@ -340,12 +342,14 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     if not has_align_score_faithfulness_documents and not has_align_score_faithfulness_passages:
         evaluation["align_score"]["faithfulness"] = {}
         
+        
     _, filtered_predictions, filtered_oracle_documents, filtered_top_k_passages = faithfulness_filterer(references)
     assert len(filtered_predictions) == len(filtered_oracle_documents) == len(filtered_top_k_passages), "Lengths do not match"
     
     if not has_align_score_faithfulness_documents:
         print("[!] using oracle documents for faithfulness")
         print(f"[!] using '{align_score_evaluation_mode_set['faithfulness']}' for faithfulness")
+        evaluation["align_score"]["meta"]["faithfulness"] = align_score_evaluation_mode_set["faithfulness"]
         proper_align_scorer = alignscorer[align_score_evaluation_mode_set["faithfulness"]]
         assert proper_align_scorer is not None, "Align scorer is None"
         try:
@@ -432,6 +436,20 @@ def add_experiment(data, args):
             raise KeyError(f"Missing required key in data['rouge']: {key}")
         
     description = ", ".join([f"{key}: {value}" for key, value in args.items() if key not in sheet_columns_args and key not in excluded_keys])
+    add_from_args = {"align_score.meta.correctness", "align_score.meta.faithfulness"}
+    
+    extra_args = []
+    for key in add_from_args:
+        keys = key.split('.')
+        value = data
+        for k in keys:
+            value = value.get(k, None)
+            if value is None:
+                break
+        extra_args.append({key: value})
+        
+    description += ", ".join([f"{key}: {value}" for key, value in extra_args])
+            
     new_row.append(description)
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
@@ -443,3 +461,4 @@ def add_experiment(data, args):
     # worksheet = sheet.get_worksheet(0)
     worksheet.append_row(new_row, value_input_option="USER_ENTERED")
     print("[!] added experiment metric!")
+    

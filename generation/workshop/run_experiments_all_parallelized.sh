@@ -41,8 +41,8 @@ knnlm_variants=(
     context_adacad_plus
     )
 datasets=(
-    obli_qa
     # cuad
+    obli_qa
     # clerc
     # echr_qa
     )

@@ -9,6 +9,7 @@ import numpy as np
 import time
 import torch
 import torch.nn.functional as F
+import faiss
 
 from generation.baselines.cad.cad import CAD
 
@@ -91,10 +92,16 @@ class KNNLM:
                     for j in range(hidden_states.shape[0]):
                         keys.extend(hidden_states[j])
                         values.extend(next_tokens[j])
-            keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
+            if self.use_faiss:
+                keys = np.array(keys).reshape(-1, np.array(keys).shape[-1]).astype('float32')
+                nneighbors = faiss.IndexFlatL2(keys.shape[-1])
+                faiss.normalize_L2(keys)
+                nneighbors.add(keys)
+            else:
+                keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
+                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
+                nneighbors.fit(keys)
             values = np.array(values).reshape(-1)
-            nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
-            nneighbors.fit(keys)
             batch_datastores.append({
                 'store': nneighbors,
                 'values': np.array(values)
@@ -124,10 +131,16 @@ class KNNLM:
                 outputs = self.model(**single_input, return_dict=True, output_hidden_states=True)
             hidden_states = outputs.hidden_states[layer_index][:, :-1, :]
             next_tokens = single_input['input_ids'][:, 1:]
-            keys = hidden_states[0].detach().cpu().numpy()
+            if self.use_faiss:
+                keys = hidden_states[0].detach().cpu().numpy().astype('float32')
+                nneighbors = faiss.IndexFlatL2(keys.shape[-1])
+                faiss.normalize_L2(keys)
+                nneighbors.add(keys)
+            else:
+                keys = hidden_states[0].detach().cpu().numpy()
+                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
+                nneighbors.fit(keys)
             values = next_tokens[0].detach().cpu().numpy()
-            nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
-            nneighbors.fit(keys)
             batch_datastores.append({
                 'store': nneighbors,
                 'values': values
@@ -146,10 +159,16 @@ class KNNLM:
             current_batch_datastore = batch_datastores[i]
             nneighbors = current_batch_datastore['store']
             values = current_batch_datastore['values'].reshape(-1)
-            query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
-
-            distances, indices = nneighbors.kneighbors(query_flat)
-            logits = 50 / distances
+            if self.use_faiss:
+                query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy().astype('float32')
+                faiss.normalize_L2(query_flat)
+                distances, indices = nneighbors.search(query_flat, k=k)
+                distances = np.clip(distances, 1e-10, None)
+                logits = 1 / distances
+            else:
+                query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
+                distances, indices = nneighbors.kneighbors(query_flat)
+                logits = 50 / distances
             
             neighbor_values = values[indices]
             knn_logits = np.zeros((query_flat.shape[0], self.model.config.vocab_size))
@@ -228,7 +247,7 @@ class KNNLM:
 
         return next_token
     
-    def generate(self, 
+    def generate(self,
                 prompts: List[str], 
                 contexts: List[str],
                 references: Optional[Union[List[str], List[List[str]]]] = None, 
@@ -249,8 +268,14 @@ class KNNLM:
                 repetition_penalty_value: float = 1.0,
                 temperature: float = 1.0,
                 min_length_ratio: float = 0.1,
+                use_faiss: bool = False,
                 ) -> List[List[int]]:
         self.model.eval()
+        self.use_faiss = use_faiss
+        if use_faiss:
+            print(f"[!] using faiss for knn search")
+        else:
+            print(f"[!] using sklearn knneighbors for knn search")
         min_length = int(min_length_ratio * max_length)
 
         if 'plus' in variant:
