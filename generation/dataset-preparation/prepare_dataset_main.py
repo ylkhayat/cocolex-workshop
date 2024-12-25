@@ -26,7 +26,7 @@ print(f"[!] chunk_overlap: {chunk_overlap}")
 
 num_proc = os.cpu_count() - 3
 
-dataset = "obli_qa"
+dataset = "oal_qa"
 
 key_field = "docid"
 if dataset == "clerc":
@@ -40,6 +40,8 @@ elif dataset == "obli_qa":
     workshop_hf_name = f"OBLI_QA-generation-workshop"
 elif dataset == "cuad":
     workshop_hf_name = f"CUAD-generation-workshop"
+elif dataset == "oal_qa":
+    workshop_hf_name = f"OAL_QA-generation-workshop"
 else:
     raise ValueError("Invalid dataset")
 current_chosen_dataset = load_dataset(f"ylkhayat/{workshop_hf_name}", data_dir="data")

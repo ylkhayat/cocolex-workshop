@@ -38,6 +38,10 @@ top_k_passages = args.top_k_passages
 use_instructions = args.use_instructions
 variant = args.variant
 
+try:
+    use_faiss = args.use_faiss
+except:
+    use_faiss = False
 
 method = "knnlm"
 if "context" in variant:
@@ -123,7 +127,8 @@ try:
                     datastore_from_layer_index=layer_index,
                     decoding_strategy=decoding_strategy,
                     use_repetition_penalty=repetition_penalty > 1.0,
-                    repetition_penalty_value=repetition_penalty
+                    repetition_penalty_value=repetition_penalty,
+                    use_faiss=use_faiss
                     )
                 generated_texts = knnlm_model.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 has_new_results = True

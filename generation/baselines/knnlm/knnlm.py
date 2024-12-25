@@ -19,7 +19,7 @@ class KNNLM:
         # print(f"[!] optimized KNNLM is initialized with model: {model_name}")
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-        self.model = torch.compile(self.model)
+        # self.model = torch.compile(self.model)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, truncation_side='left', use_fast=True)
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -96,6 +96,10 @@ class KNNLM:
                 keys = np.array(keys).reshape(-1, np.array(keys).shape[-1]).astype('float32')
                 nneighbors = faiss.IndexFlatL2(keys.shape[-1])
                 faiss.normalize_L2(keys)
+                if torch.cuda.is_available():
+                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
+                    # res = faiss.StandardGpuResources()
+                    # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)
             else:
                 keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
@@ -135,6 +139,10 @@ class KNNLM:
                 keys = hidden_states[0].detach().cpu().numpy().astype('float32')
                 nneighbors = faiss.IndexFlatL2(keys.shape[-1])
                 faiss.normalize_L2(keys)
+                if torch.cuda.is_available():
+                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
+                    # res = faiss.StandardGpuResources()
+                    # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)
             else:
                 keys = hidden_states[0].detach().cpu().numpy()
@@ -269,15 +277,17 @@ class KNNLM:
                 temperature: float = 1.0,
                 min_length_ratio: float = 0.1,
                 use_faiss: bool = False,
+                generate_time_report: bool = False
                 ) -> List[List[int]]:
         self.model.eval()
         self.use_faiss = use_faiss
-        if use_faiss:
-            print(f"[!] using faiss for knn search")
-        else:
-            print(f"[!] using sklearn knneighbors for knn search")
+        time_report = {}
+        # if use_faiss:
+        #     print(f"[!] using faiss for knn search")
+        # else:
+        #     print(f"[!] using sklearn knneighbors for knn search")
         min_length = int(min_length_ratio * max_length)
-
+        
         if 'plus' in variant:
             batch_datastores = self.construct_datastore_plus(references,
                                                              overlap=0.5,
@@ -361,14 +371,7 @@ class KNNLM:
                         outputs_hidden_states = outputs.hidden_states
                         final_token_logits = next_token_logits
                 
-                
-                # final_input_ids = input_ids if "context" not in variant else input_ids_with_contexts
-                # is_last_input_id_pad = final_input_ids[:, -1].item() == self.tokenizer.pad_token_id
-                
                 query_to_knn = outputs_hidden_states[datastore_from_layer_index][:, -1:, :]
-                # query_to_knn = [] if is_last_input_id_pad else query_to_knn
-                # if len(query_to_knn) == 0:
-                    # print('aheh')
                 knn_next_token_probs = self.compute_knn_probs(batch_datastores, query_to_knn, k=k, temperature=temperature)
                 
                 

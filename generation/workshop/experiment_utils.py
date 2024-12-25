@@ -1,6 +1,7 @@
 print(f"[!] loading dependencies!")
 import copy
 from evaluate import load
+import ipdb
 print(f"[!] loading evaluation!")
 from generation.evaluation.align_score.src.alignscore import AlignScore
 from generation.evaluation.unieval.metric.evaluator import get_evaluator
@@ -9,6 +10,7 @@ from generation.evaluation.GapHalu.eval_gap_halu import generate_and_parse_datas
 from oauth2client.service_account import ServiceAccountCredentials
 from transformers import pipeline
 from tabulate import tabulate
+from tqdm import tqdm
 import argparse
 import gspread
 import json
@@ -44,7 +46,8 @@ def build_args_parser(method):
     parser.add_argument("--setup", type=str, default="bm25_oracle_passages_oracle_documents")
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--strategy", type=str, choices=['constant', 'entropy', 'adacad'], default='constant')
-    parser.add_argument("--top_k_passages", type=int, default=10)
+    parser.add_argument("--top_k_passages", type=int, default=3)
+    parser.add_argument("--use_faiss", type=int, default=0)
     parser.add_argument("--use_instructions", type=int, default=0)
     parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
     args = parser.parse_args()
@@ -61,6 +64,18 @@ def build_args_parser(method):
         args.top_k_passages = 10
     elif 'echr' in args.dataset:
         args.max_new_tokens = 300
+        
+    if 'plus' in args.variant:
+        if 'cuad' in args.dataset or 'obli_qa' in args.dataset:
+            args.use_faiss = True
+        else:
+            args.use_faiss = args.use_faiss == 1
+    else:
+        try:
+            del args.use_faiss
+        except:
+            pass
+        
         
     args.use_instructions = args.use_instructions == 1
     args.override = args.override == 1
@@ -153,18 +168,73 @@ def build_path(args):
     dataset = args['dataset']
     top_k_passages = args['top_k_passages']
     setup = args['setup']
-    results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
-    results_params_str = "_".join([f"{key[:2]}-{value}" for key, value in results_params.items()])
-    meta_params = {k: v for k, v in args.items() if k not in local_meta_path_excluded_keys}
-    meta_params_str = "_".join([f"{key[:2]}-{value}" for key, value in meta_params.items()])
-
     model_cleaned = model.replace("/", "_")
-    common_output_path = f"../basement/{dataset}/{split}/{setup}/{top_k_passages}/{model_cleaned}"
-    results_output_path = f"{common_output_path}/generations/{method}__{results_params_str}.jsonl"
-    legacy_results_output_path = f"{common_output_path}/results/{method}__{meta_params_str}.jsonl"
-    meta_output_path = f"{common_output_path}/meta/{method}__{meta_params_str}.json"
+    common_output_path = f"../basement/{dataset}/{split}/{setup}/{top_k_passages}/{model_cleaned}"    
+    results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
+    
+    def get_short_key(key):
+        return ''.join([part[0] for part in key.split('_')])
+    
+    def move_to_archive(path):
+        archive_path = path.replace("/generations/", "/archive/generations/").replace("/meta/", "/archive/meta/")
+        os.makedirs(os.path.dirname(archive_path), exist_ok=True)
+        if os.path.exists(path) and not os.path.exists(archive_path):
+            print(f"[!] moving {path} to {archive_path}")
+            os.rename(path, archive_path)
+            print(f"[!] moved {path} to {archive_path}")
+    old_results_params_str = "_".join([f"{key[:2]}-{value}" for key, value in results_params.items() if "use_faiss" not in key])
+    old_results_output_path = f"{common_output_path}/generations/{method}__{old_results_params_str}.jsonl"
+    new_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in results_params.items()])
+    results_output_path = f"{common_output_path}/generations/{method}__{new_results_params_str}.jsonl"
+    
+    def detect_old_results_path(old_path, new_path):
+        return (os.path.exists(old_path) and 
+                (not os.path.exists(new_path) or 
+                 os.path.getsize(old_path) > os.path.getsize(new_path)))
+    
+    if detect_old_results_path(old_results_output_path, results_output_path):
+        print(f"[!] copying old results to new results path: {results_output_path}")
+        with open(old_results_output_path, "r") as f:
+            with open(results_output_path, "w") as g:
+                for line in tqdm(f, desc="Copying results"):
+                    g.write(line)
+        print(f"[!] copied old results to new results path: {results_output_path}")
+    move_to_archive(old_results_output_path)
+
+    meta_params = {k: v for k, v in args.items() if k not in local_meta_path_excluded_keys}
+    old_meta_params_str = "_".join([f"{key[:2]}-{value}" for key, value in meta_params.items()])
+    old_meta_output_path = f"{common_output_path}/meta/{method}__{old_meta_params_str}.json"
+    legacy_results_output_path = f"{common_output_path}/results/{method}__{old_meta_output_path}.jsonl"
+    new_meta_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in meta_params.items()])
+    meta_output_path = f"{common_output_path}/meta/{method}__{new_meta_params_str}.json"
+    if detect_old_results_path(old_meta_output_path, meta_output_path):
+        print(f"[!] copying old meta to new meta path: {meta_output_path}")
+        with open(old_meta_output_path, "r") as f:
+            with open(meta_output_path, "w") as g:
+                for line in tqdm(f, desc="Copying meta"):
+                    g.write(line)
+        print(f"[!] copied old meta to new meta path: {meta_output_path}")
+    move_to_archive(old_meta_output_path)
+    
+    if "plus" in method:
+        current_results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
+        current_old_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_results_params.items() if key != "use_faiss"])
+        old_results_output_path = f"{common_output_path}/generations/{method}__{current_old_results_params_str}.jsonl"
+        current_results_params["use_faiss"] = False
+        new_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_results_params.items()])
+        new_results_output_path = f"{common_output_path}/generations/{method}__{new_results_params_str}.jsonl"
+        if detect_old_results_path(old_results_output_path, new_results_output_path):
+            print(f"[!] copying {old_results_output_path} to: {new_results_output_path}")
+            ipdb.set_trace()
+            with open(old_results_output_path, "r") as f:
+                with open(new_results_output_path, "w") as g:
+                    for line in tqdm(f, desc="Copying results"):
+                        g.write(line)
+            print(f"[!] copied old results to new results path: {new_results_output_path}")
+        move_to_archive(old_results_output_path)
+
     os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
-    os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)
+    os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)    
     return results_output_path, meta_output_path, legacy_results_output_path
 
 def print_args(args):
@@ -207,7 +277,7 @@ def get_resources(results, reference_dataset):
     return reference_dataset.to_dict()
     
     
-def evaluate(results, device, reference_dataset, args, has_new_results=True, align_score_evaluation_mode="nli"):
+def evaluate(results, device, reference_dataset, args, has_new_results=True, align_score_evaluation_mode="bin"):
     try:
         evaluation = load_results(args)
         if evaluation is None:
@@ -285,9 +355,15 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
         "correctness": align_score_evaluation_mode,
         "faithfulness": align_score_evaluation_mode
         }
-    if args.dataset == "cuad" or args.dataset == "obli_qa":
-        align_score_evaluation_mode_set["correctness"] = "bin"
-        align_score_evaluation_mode_set["faithfulness"] = "bin"
+    # if args.dataset == "cuad" or args.dataset == "obli_qa":
+    #     align_score_evaluation_mode_set["correctness"] = "bin"
+    #     align_score_evaluation_mode_set["faithfulness"] = "bin"
+    # elif args.dataset == "clerc":
+    #     align_score_evaluation_mode_set["correctness"] = "bin"
+    #     align_score_evaluation_mode_set["faithfulness"] = "bin"
+    # elif args.dataset == "echr_qa":
+    #     align_score_evaluation_mode_set["correctness"] = "bin"
+    #     align_score_evaluation_mode_set["faithfulness"] = "bin"
         
     has_align_score_correctness = False
     has_align_score_faithfulness_documents = False
@@ -347,8 +423,8 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     assert len(filtered_predictions) == len(filtered_oracle_documents) == len(filtered_top_k_passages), "Lengths do not match"
     
     if not has_align_score_faithfulness_documents:
-        print("[!] using oracle documents for faithfulness")
         print(f"[!] using '{align_score_evaluation_mode_set['faithfulness']}' for faithfulness")
+        print("[!] using oracle documents for faithfulness")
         evaluation["align_score"]["meta"]["faithfulness"] = align_score_evaluation_mode_set["faithfulness"]
         proper_align_scorer = alignscorer[align_score_evaluation_mode_set["faithfulness"]]
         assert proper_align_scorer is not None, "Align scorer is None"
@@ -446,10 +522,11 @@ def add_experiment(data, args):
             value = value.get(k, None)
             if value is None:
                 break
-        extra_args.append({key: value})
+        extra_args.append((key, value))
         
-    description += ", ".join([f"{key}: {value}" for key, value in extra_args])
-            
+    description_extra = ", ".join([f"{key}: {value}" for (key, value) in extra_args])
+    if description_extra:
+        description += f", {description_extra}"
     new_row.append(description)
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]

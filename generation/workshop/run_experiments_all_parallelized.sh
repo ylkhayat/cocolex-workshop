@@ -16,16 +16,17 @@ fi
 split=$1
 run_mode=${2:-all}
 variant_mode=${3:-all}
+time_between_experiments=18
 
 models=(
     # meta-llama/Llama-3.1-8B-Instruct
-    # Equall/Saul-7B-Instruct-v1 
     mistralai/Mistral-7B-Instruct-v0.3
+    Equall/Saul-7B-Instruct-v1 
     )
 setups=(
-    # bm25_oracle_passages_oracle_documents 
+    bm25_oracle_passages_oracle_documents 
     bm25_relevant_passages_oracle_documents 
-    # bm25_noisy_oracle_passages_oracle_documents
+    bm25_noisy_oracle_passages_oracle_documents
     # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
     # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
     )
@@ -41,10 +42,10 @@ knnlm_variants=(
     context_adacad_plus
     )
 datasets=(
-    # cuad
+    clerc
+    cuad
+    echr_qa
     obli_qa
-    # clerc
-    # echr_qa
     )
 # dataset_percentage=0.01
 # dataset_percentage=0.1
@@ -121,7 +122,7 @@ log_skip_experiment() {
 
 session_name="experiment_session"
 tmux new-session -d -s "$session_name" || tmux attach -t "$session_name"
-
+# time_between_experiments=18
 should_run=0
 echo -e "${BOLD} [!]\t running mode '$run_mode'"
 echo -e "${BOLD} [!]\t variant mode '$variant_mode'"
@@ -153,7 +154,7 @@ for dataset in "${datasets[@]}"; do
                             tmux new-window -t "$session_name" -n "$window_name" \
                                 "./run_experiments_rag.sh $python_args --device $gpu; \
                                 tmux kill-window -t \"\${session_name}:$window_name\";"
-                            sleep 18
+                            sleep $time_between_experiments
                         else
                             log_skip_experiment "RAG" "$extra_info"
                         fi
@@ -179,7 +180,7 @@ for dataset in "${datasets[@]}"; do
                                 tmux new-window -t "$session_name" -n "$window_name" \
                                     "./run_experiments_cad.sh $python_args --device $gpu; \
                                     tmux kill-window -t \"\${session_name}:$window_name\";"
-                                sleep 18
+                                sleep $time_between_experiments
                             else
                                 log_skip_experiment "CAD" "$extra_info[$strategy]"
                             fi
@@ -213,7 +214,7 @@ for dataset in "${datasets[@]}"; do
                                     tmux new-window -t "$session_name" -n "$window_name" \
                                         "./run_experiments_knnlm.sh $python_args --device $gpu; \
                                         tmux kill-window -t \"\${session_name}:$window_name\";"
-                                    sleep 18
+                                    sleep $time_between_experiments
                                 else
                                     log_skip_experiment "KNNLM" "$extra_info[$knn_method][$knn_variant]"
                                 fi
