@@ -1,12 +1,9 @@
-import ipdb
 from more_itertools import chunked
 from sklearn.neighbors import NearestNeighbors
-from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from typing import Tuple, Union, List, Literal, Optional
+from typing import Tuple, Union, List, Optional
 import gc
 import numpy as np
-import time
 import torch
 import torch.nn.functional as F
 import faiss
@@ -16,7 +13,6 @@ from generation.baselines.cad.cad import CAD
 
 class KNNLM:
     def __init__(self, model_name: str, device: Union[int,str] = 0):
-        # print(f"[!] optimized KNNLM is initialized with model: {model_name}")
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
         # self.model = torch.compile(self.model)
@@ -73,8 +69,6 @@ class KNNLM:
                                     k=10):
         assert overlap >= 0.0 and overlap <= 1.0, "Overlap must be between [0, 1]"
         assert isinstance(context_texts, list), "references must be a list of lists"
-        # print(f"[!] constructing plus datastore from layer '{layer_index}'")
-        begin_time = time.process_time()
         batch_datastores = []
         for references in context_texts:
             keys = []
@@ -110,8 +104,6 @@ class KNNLM:
                 'store': nneighbors,
                 'values': np.array(values)
             })
-        elapsed_time = time.process_time() - begin_time
-        # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
     
@@ -121,8 +113,6 @@ class KNNLM:
                                     context_texts: List[str],
                                     layer_index=-1,
                                     k=10):
-        # print(f"[!] constructing datastore: {layer_index}")
-        begin_time = time.process_time()
         batch_datastores = []
         for text in context_texts:
             single_input = self.tokenizer(text,
@@ -153,8 +143,6 @@ class KNNLM:
                 'store': nneighbors,
                 'values': values
             })
-        elapsed_time = time.process_time() - begin_time
-        # print(f"[!] datastore construction took {elapsed_time:.2f} seconds")
         return batch_datastores
     
 
@@ -281,11 +269,6 @@ class KNNLM:
                 ) -> List[List[int]]:
         self.model.eval()
         self.use_faiss = use_faiss
-        time_report = {}
-        # if use_faiss:
-        #     print(f"[!] using faiss for knn search")
-        # else:
-        #     print(f"[!] using sklearn knneighbors for knn search")
         min_length = int(min_length_ratio * max_length)
         
         if 'plus' in variant:
@@ -413,10 +396,9 @@ class KNNLM:
                 for i, token in enumerate(next_token.tolist()):
                     if unfinished_sents[i] == 1:
                         generated_tokens[i].append(token)
-                    if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id:
-                        if cur_len > min_length:
-                            unfinished_sents[i] = 0
-                            sent_lengths[i] = cur_len
+                    if unfinished_sents[i] == 1 and token == self.tokenizer.eos_token_id and cur_len > min_length:
+                        unfinished_sents[i] = 0
+                        sent_lengths[i] = cur_len
                 if unfinished_sents.max() == 0:
                     break
 
