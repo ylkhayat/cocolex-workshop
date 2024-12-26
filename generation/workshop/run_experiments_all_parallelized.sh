@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-# Reload the conda environment
 source /srv/elkhyo/anaconda3/etc/profile.d/conda.sh
 conda activate pld
 
@@ -67,12 +65,9 @@ check_experiment() {
     script_path="$1"
     passed_args="$2"
 
-
-    # Run the check in a new tmux window and wait for it to complete
     tmux new-window -t "$session_name" -n experiment_checker \
         "$script_path $passed_args --check_only 1; echo \$? > check_exit_code.txt; \
         echo 'done' > check_status.txt"
-    # Wait for the experiment check to complete
     while true; do
         if [[ -f check_status.txt && $(cat check_status.txt) == "done" ]]; then
             break
@@ -90,7 +85,6 @@ check_experiment() {
 
 
 
-# Define colors and styles
 GREEN="\033[32m"
 RED="\033[31m"
 PURPLE="\033[35m"
@@ -122,7 +116,6 @@ log_skip_experiment() {
 
 session_name="experiment_session"
 tmux new-session -d -s "$session_name" || tmux attach -t "$session_name"
-# time_between_experiments=18
 should_run=0
 echo -e "${BOLD} [!]\t running mode '$run_mode'"
 echo -e "${BOLD} [!]\t variant mode '$variant_mode'"

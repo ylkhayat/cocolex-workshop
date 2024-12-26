@@ -1,7 +1,6 @@
 import sys
 import traceback
 
-import ipdb
 if '/srv/elkhyo/lexquo' not in sys.path:
     sys.path.insert(0, '/srv/elkhyo/lexquo')
 from generation.workshop.dataloader import ModelInputPreprocessor
@@ -125,5 +124,5 @@ try:
 except Exception as e:
     print(f"[!] Error: {e}")
     traceback.print_exc()
-    send_slack_notification(f"[x] Experiment failed!")
+    send_slack_notification("[x] Experiment failed!")
     sys.exit(1)
