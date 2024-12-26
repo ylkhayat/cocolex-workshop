@@ -1,21 +1,22 @@
+from generation.baselines.cad.cad import CAD
 from more_itertools import chunked
 from sklearn.neighbors import NearestNeighbors
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import Tuple, Union, List, Optional
+import faiss
 import gc
 import numpy as np
 import torch
 import torch.nn.functional as F
-import faiss
 
-from generation.baselines.cad.cad import CAD
-
+from generation.workshop.time_monitor import GenerationTimeMonitor
 
 class KNNLM:
-    def __init__(self, model_name: str, device: Union[int,str] = 0):
+    def __init__(self, model_name: str, device: Union[int,str] = 0, compile: bool = True):
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-        # self.model = torch.compile(self.model)
+        if compile:
+            self.model = torch.compile(self.model)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, truncation_side='left', use_fast=True)
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -267,10 +268,16 @@ class KNNLM:
                 use_faiss: bool = False,
                 generate_time_report: bool = False
                 ) -> List[List[int]]:
+        if generate_time_report:
+            assert len(prompts) == len(contexts) == 1, "Time report mode only supports batch size 1"
+            monitor = GenerationTimeMonitor()
+
         self.model.eval()
         self.use_faiss = use_faiss
         min_length = int(min_length_ratio * max_length)
-        
+
+        if generate_time_report:
+            monitor.start_record("build_datastores")
         if 'plus' in variant:
             batch_datastores = self.construct_datastore_plus(references,
                                                              overlap=0.5,
@@ -279,9 +286,10 @@ class KNNLM:
         else:
             batch_datastores = self.construct_datastore_individually(references,
                                                                      layer_index=datastore_from_layer_index,
-                                                                     k=k) 
-            
-            
+                                                                     k=k)
+        if generate_time_report:
+            monitor.stop_record("build_datastores")
+
         tokenized_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
         tokenized_inputs = {key: value.to(self.model.device) for key, value in tokenized_inputs.items()}
         input_ids = tokenized_inputs['input_ids']
@@ -293,8 +301,8 @@ class KNNLM:
             "cache_position": cache_position,
             "past_key_values": None
         }
-        
-        
+
+
         inputs_with_contexts = [f"{context}{self.tokenizer.eos_token}{prompt}" for context, prompt in zip(contexts, prompts)]
         tokenized_inputs_with_contexts = self.tokenizer(inputs_with_contexts, return_tensors="pt", padding=True, truncation=True, max_length=self.model.config.max_position_embeddings)
         tokenized_inputs_with_contexts = {key: value.to(self.model.device) for key, value in tokenized_inputs_with_contexts.items()}
@@ -307,11 +315,11 @@ class KNNLM:
             "cache_position": cache_position_with_contexts,
             "past_key_values": None
         }
-        
+
         cur_len = 0
         batch_size = len(input_ids)
         previous_lambda = torch.zeros((batch_size, 1), device=self.device)
-        
+
         alpha_tr = torch.full((batch_size, 1), alpha, device=self.device)
         unfinished_sents = input_ids.new(batch_size).fill_(1)
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
@@ -319,8 +327,24 @@ class KNNLM:
 
         entropies_history = [previous_lambda]
         lamba_history = [previous_lambda]
+
+
+        if generate_time_report:
+            average_tokenized_reference_length = sum(
+                len(self.tokenizer(reference, return_tensors="pt")['input_ids'][0])
+                for reference in references
+            ) / len(references)
+            monitor.set_lengths(
+                tokenized_context_length=self.tokenizer(contexts[0], return_tensors="pt")['input_ids'].shape[1],
+                tokenized_prompt_length=self.tokenizer(prompts[0], return_tensors="pt")['input_ids'].shape[1],
+                tokenized_reference_length=average_tokenized_reference_length,
+                max_length=max_length
+            )
         with torch.no_grad():
             while cur_len < max_length:
+                if generate_time_report:
+                    monitor.start_record("token")
+
                 if "context" not in variant or "adacad" in variant:
                     model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                     outputs = self.model(**model_inputs,
@@ -330,7 +354,7 @@ class KNNLM:
                     model_kwargs["attention_mask"] = torch.cat([model_kwargs["attention_mask"], torch.ones((batch_size, 1), device=self.device)], dim=-1)
                     model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + 1
                     model_kwargs["past_key_values"] = outputs.past_key_values
-                    
+
                 if "context" in variant or "adacad" in variant:
                     model_inputs_with_contexts = self.model.prepare_inputs_for_generation(input_ids_with_contexts, **model_kwargs_with_contexts)
                     outputs_with_contexts = self.model(**model_inputs_with_contexts,
@@ -340,11 +364,11 @@ class KNNLM:
                     model_kwargs_with_contexts["attention_mask"] = torch.cat([model_kwargs_with_contexts["attention_mask"], torch.ones((batch_size, 1), device=self.device)], dim=-1)
                     model_kwargs_with_contexts["cache_position"] = model_kwargs_with_contexts["cache_position"][-1:] + 1
                     model_kwargs_with_contexts["past_key_values"] = outputs_with_contexts.past_key_values
-                    
+
 
                 outputs_hidden_states = outputs_with_contexts.hidden_states
                 final_token_logits = next_token_logits_with_contexts
-                
+
                 if "adacad" in variant:
                     alpha_tr = CAD.compute_jsd_per_batch(next_token_logits_with_contexts, next_token_logits)
                     outputs_hidden_states = outputs_with_contexts.hidden_states
@@ -353,11 +377,15 @@ class KNNLM:
                     if "context" not in variant:
                         outputs_hidden_states = outputs.hidden_states
                         final_token_logits = next_token_logits
-                
+
                 query_to_knn = outputs_hidden_states[datastore_from_layer_index][:, -1:, :]
+                if generate_time_report:
+                    monitor.start_record("knn")
                 knn_next_token_probs = self.compute_knn_probs(batch_datastores, query_to_knn, k=k, temperature=temperature)
-                
-                
+                if generate_time_report:
+                    monitor.stop_record("knn")
+
+
                 original_dtype = final_token_logits.dtype
                 original_next_token_probs = F.softmax(final_token_logits / temperature, dim=-1).float()
                 if strategy == 'entropy':
@@ -377,8 +405,8 @@ class KNNLM:
                     lamba_history.append(lamba)
                     previous_lambda = lamba
                     assert torch.all(lamba >= 0.0) and torch.all(lamba <= 1.0), "Lambda must be between [0, 1]"
-                    
-                    
+
+
                 next_token_probs = (1 - lamba) * knn_next_token_probs.to(original_dtype) + lamba * original_next_token_probs.to(original_dtype)
                 next_token = self.predict_next_token(probs=next_token_probs, 
                                                     decoding_strategy=decoding_strategy, 
@@ -388,10 +416,13 @@ class KNNLM:
                                                     repetition_penalty_value=repetition_penalty_value, 
                                                     generated_tokens=[set(tokens) for tokens in generated_tokens])
 
+                if generate_time_report:
+                    monitor.stop_record("token")
+
                 input_ids = torch.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
                 input_ids_with_contexts = torch.cat([input_ids_with_contexts, next_token.unsqueeze(-1)], dim=-1)
 
-                
+
                 cur_len += 1
                 for i, token in enumerate(next_token.tolist()):
                     if unfinished_sents[i] == 1:
@@ -405,7 +436,10 @@ class KNNLM:
         gc.collect()
         torch.cuda.empty_cache()
 
-        return generated_tokens
+        if generate_time_report:
+            report_json = monitor.get_report(generation_length=max(sent_lengths).item())
+            return generated_tokens, report_json
 
+        return generated_tokens
 
 

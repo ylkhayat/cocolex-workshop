@@ -1,32 +1,17 @@
+import gc
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import Literal, Union, List, Optional
-import numpy as np
-import random
-import sys
 import torch
 import torch.nn.functional as F
-import transformers
 
-print(f"Python Version : {sys.version}")
-print(f"Torch Version : {torch.__version__}")
-print(f"Transformers Version : {transformers.__version__}")
-
-def set_seed(random_seed):
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-set_seed(1002)
+from generation.workshop.time_monitor import GenerationTimeMonitor
 
 class CAD:
-    def __init__(self, model_name: str, device: Union[int,str] = 0):
+    def __init__(self, model_name: str, device: Union[int,str] = 0, compile: bool = True):
         device_map = torch.device(f"cuda:{device}" if torch.cuda.is_available() else "cpu")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device_map, use_cache=True, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-        self.model = torch.compile(self.model)
+        if compile:
+            self.model = torch.compile(self.model)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side='left', truncation_side='left')
         self.device = device_map
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -161,7 +146,12 @@ class CAD:
                 repetition_penalty_value: float = 1.0,
                 temperature: float = 1.0,
                 min_length_ratio: float = 0.1,
+                generate_time_report: bool = False
                 ) -> List[List[int]]:
+        if generate_time_report:
+            monitor = GenerationTimeMonitor()
+            assert len(prompts) == len(contexts) == 1, "Time report mode only supports batch size 1"
+            
         self.model.eval()
         min_length = int(min_length_ratio * max_length)
 
@@ -200,8 +190,18 @@ class CAD:
 
         generated_tokens = [[] for _ in range(batch_size)]
 
+        if generate_time_report:
+            monitor.set_lengths(
+                tokenized_context_length=self.tokenizer(contexts[0], return_tensors="pt")['input_ids'].shape[1],
+                tokenized_prompt_length=self.tokenizer(prompts[0], return_tensors="pt")['input_ids'].shape[1],
+                tokenized_reference_length=None,
+                max_length=max_length
+            )
         with torch.no_grad():
             while cur_len < max_length:
+                if generate_time_report:
+                    monitor.start_record("token")
+                    
                 model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 outputs = self.model(**model_inputs,
                                      return_dict=True)
@@ -230,6 +230,9 @@ class CAD:
                                                     repetition_penalty_value=repetition_penalty_value, 
                                                     generated_tokens=[set(tokens) for tokens in generated_tokens])
                 
+                if generate_time_report:
+                    monitor.stop_record("token")
+                    
                 input_ids = torch.cat([input_ids, next_token.unsqueeze(-1)], dim=-1)
                 input_ids_with_contexts = torch.cat([input_ids_with_contexts, next_token.unsqueeze(-1)], dim=-1)
 
@@ -244,6 +247,14 @@ class CAD:
 
                 if unfinished_sents.max() == 0:
                     break
+        
+        gc.collect()
+        torch.cuda.empty_cache()
+        
+        if generate_time_report:
+            report_json = monitor.get_report(generation_length=max(sent_lengths).item())
+            return generated_tokens, report_json
+        
         return generated_tokens
 
 

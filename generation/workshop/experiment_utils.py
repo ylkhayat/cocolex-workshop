@@ -1,21 +1,37 @@
-print(f"[!] loading dependencies!")
-import copy
 from evaluate import load
-import ipdb
-print(f"[!] loading evaluation!")
 from generation.evaluation.align_score.src.alignscore import AlignScore
 from generation.evaluation.unieval.metric.evaluator import get_evaluator
 from generation.evaluation.unieval.utils import convert_to_json
-from generation.evaluation.GapHalu.eval_gap_halu import generate_and_parse_dataset
 from oauth2client.service_account import ServiceAccountCredentials
-from transformers import pipeline
 from tabulate import tabulate
 from tqdm import tqdm
+from transformers import pipeline
 import argparse
+import copy
 import gspread
+import ipdb
 import json
 import numpy as np
 import os
+import random
+import sys
+import torch
+import transformers
+
+def set_seed(random_seed):
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+
+set_seed(1002)
+
+print(f"Python Version : {sys.version}")
+print(f"Torch Version : {torch.__version__}")
+print(f"Transformers Version : {transformers.__version__}")
 
 num_proc = os.cpu_count() - 2
 align_score_model_to_use = 'https://huggingface.co/yzha/AlignScore/resolve/main/AlignScore-large.ckpt'
@@ -24,34 +40,7 @@ if not os.path.exists(service_account_json_file):
     raise FileNotFoundError(f"[!] service account JSON file not found: {service_account_json_file}")
 
 
-def build_args_parser(method):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--check_only',type=int, default=0, help='Only check if the experiment needs to run.')
-    parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--dataset_percentage", type=float, default=0.005)
-    parser.add_argument("--dataset", type=str, default="clerc")
-    parser.add_argument("--decoding_strategy", type=str, choices=['top_p', 'top_k', 'greedy'], default='greedy')
-    parser.add_argument("--device", type=int, default=0)
-    parser.add_argument("--override", type=int, default=0)
-    parser.add_argument("--repetition_penalty", type=float, default=1.5)
-    
-    if 'knnlm' in method:
-        parser.add_argument("--entropy_sigmoid_threshold", type=float, default=0.5)
-        parser.add_argument("--entropy_strategy", type=str, choices=['exp', 'exp_norm', 'sig'], default='exp_norm')
-        parser.add_argument("--lambda_smoothing_factor", type=float, default=0.5)
-    
-    parser.add_argument("--max_new_tokens", type=int, default=200)
-    parser.add_argument("--method", type=str)
-    parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.3")
-    parser.add_argument("--setup", type=str, default="bm25_oracle_passages_oracle_documents")
-    parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--strategy", type=str, choices=['constant', 'entropy', 'adacad'], default='constant')
-    parser.add_argument("--top_k_passages", type=int, default=3)
-    parser.add_argument("--use_faiss", type=int, default=0)
-    parser.add_argument("--use_instructions", type=int, default=0)
-    parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
-    args = parser.parse_args()
-    
+def assign_args_modifications(args):
     if 'echr_qa' in args.dataset:
         args.max_new_tokens = 300
     elif 'clerc' in args.dataset:
@@ -76,10 +65,37 @@ def build_args_parser(method):
         except:
             pass
         
-        
     args.use_instructions = args.use_instructions == 1
     args.override = args.override == 1
     return args
+
+def build_args_parser(method):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--check_only',type=int, default=0, help='Only check if the experiment needs to run.')
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--dataset_percentage", type=float, default=0.005)
+    parser.add_argument("--dataset", type=str, default="clerc")
+    parser.add_argument("--decoding_strategy", type=str, choices=['top_p', 'top_k', 'greedy'], default='greedy')
+    parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--override", type=int, default=0)
+    parser.add_argument("--repetition_penalty", type=float, default=1.5)
+    
+    if 'knnlm' in method:
+        parser.add_argument("--entropy_sigmoid_threshold", type=float, default=0.5)
+        parser.add_argument("--entropy_strategy", type=str, choices=['exp', 'exp_norm', 'sig'], default='exp_norm')
+        parser.add_argument("--lambda_smoothing_factor", type=float, default=0.5)
+    
+    parser.add_argument("--max_new_tokens", type=int, default=200)
+    parser.add_argument("--method", type=str)
+    parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.3")
+    parser.add_argument("--setup", type=str, default="bm25_relevant_passages_oracle_documents")
+    parser.add_argument("--split", type=str, default="test")
+    parser.add_argument("--strategy", type=str, choices=['constant', 'entropy', 'adacad'], default='constant')
+    parser.add_argument("--top_k_passages", type=int, default=3)
+    parser.add_argument("--use_faiss", type=int, default=0)
+    parser.add_argument("--use_instructions", type=int, default=0)
+    parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
+    return assign_args_modifications(parser.parse_args())
 
 
 def load_results(args):

@@ -87,9 +87,10 @@ try:
         context_prefixes = batch['context_prefix']
         contexts = batch['context']
         prompts = batch['prompt']
-        prompts = [f"{context_prefix}\n\n{context}{rag_model.tokenizer.eos_token}{prompt}" for context_prefix, context, prompt in zip(context_prefixes, contexts, prompts)]
+        contexts = [f"{context_prefix}\n\n{context}" for context_prefix, context in zip(context_prefixes, contexts)]
         outputs = rag_model.generate(
             prompts=prompts,
+            contexts=contexts,
             max_length=max_new_tokens,
             decoding_strategy=decoding_strategy,
             use_repetition_penalty=repetition_penalty > 1.0,

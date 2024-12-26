@@ -1,27 +1,9 @@
 from generation.workshop.time_monitor import GenerationTimeMonitor
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import Optional, Union, List
-import numpy as np
-import random
-import sys
+import gc
 import torch
 import torch.nn.functional as F
-import transformers
-
-print(f"Python Version : {sys.version}")
-print(f"Torch Version : {torch.__version__}")
-print(f"Transformers Version : {transformers.__version__}")
-
-def set_seed(random_seed):
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-set_seed(1002)
 
 class RAG:
     def __init__(self, model_name: str, device: Union[int,str] = 0, compile: bool = True):
@@ -121,8 +103,9 @@ class RAG:
                  generate_time_report: bool = False
                 ):
         if generate_time_report:
+            monitor = GenerationTimeMonitor()
             assert len(prompts) == len(contexts) == 1, "Time report mode only supports batch size 1"
-            print("[!] time report mode is on")
+            
         self.model.eval()
         min_length = int(min_length_ratio * max_length)
         inputs_with_contexts = [f"{context}{self.tokenizer.eos_token}{prompt}" for context, prompt in zip(contexts, prompts)]
@@ -153,7 +136,7 @@ class RAG:
         generated_tokens = [[] for _ in range(batch_size)]
 
         if generate_time_report:
-            monitor = GenerationTimeMonitor(
+            monitor.set_lengths(
                 tokenized_context_length=self.tokenizer(contexts[0], return_tensors="pt")['input_ids'].shape[1],
                 tokenized_prompt_length=self.tokenizer(prompts[0], return_tensors="pt")['input_ids'].shape[1],
                 tokenized_reference_length=None,
@@ -162,7 +145,6 @@ class RAG:
 
         with torch.no_grad():
             while cur_len < max_length:
-                
                 if generate_time_report:
                     monitor.start_record("token")
                     
@@ -202,6 +184,10 @@ class RAG:
 
                 if unfinished_sents.max() == 0:
                     break
+                
+        gc.collect()
+        torch.cuda.empty_cache()
+        
         if generate_time_report:
             report_json = monitor.get_report(generation_length=max(sent_lengths).item())
             return generated_tokens, report_json

@@ -1,20 +1,22 @@
 import time
 
 class GenerationTimeMonitor:
-    def __init__(self, 
-                 tokenized_prompt_length: int,
-                 tokenized_context_length: int,
-                 tokenized_reference_length: int,
-                 max_length: int):
+    def __init__(self):
         self.current_token_timer = {}
-        self.max_length = max_length
         self.generation_time_cost = {}
         self.generation_length = None
+        
+    def set_lengths(self, 
+                    tokenized_prompt_length,
+                    tokenized_context_length, 
+                    tokenized_reference_length, 
+                    max_length):
         self.tokenized_lengths = {
             "prompt": tokenized_prompt_length,
             "context": tokenized_context_length,
-            "reference": tokenized_reference_length,
+            "references": tokenized_reference_length,
         }
+        self.max_length = max_length
 
     def start_record(self, key: str):
         if key in self.current_token_timer:
@@ -29,6 +31,14 @@ class GenerationTimeMonitor:
         self.generation_time_cost[key].append(time.perf_counter() - self.current_token_timer[key])
         del self.current_token_timer[key]
     
+    
+    def reset(self):
+        self.current_token_timer = {}
+        self.generation_time_cost = {}
+        self.generation_length = None
+        self.tokenized_lengths = None
+        self.max_length = None
+        
     def get_report(self, generation_length) -> dict[str, any]:
         report = {
             "generation_length": {
@@ -53,4 +63,5 @@ class GenerationTimeMonitor:
                 "overall": time_generation_for_all_tokens,
                 "mean": mean_time_generation_per_token,
             }
+        self.reset()
         return report
