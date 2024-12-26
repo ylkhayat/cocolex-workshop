@@ -330,14 +330,14 @@ def run_experiment_knnlm():
     args.method = method
     print_args(args)
     strategies = [
-        # 'constant',
+        'constant',
         'entropy'
         ]
     variants = [
-        # 'context',
-        # 'context_adacad',
+        'context',
+        'context_adacad',
         'context_plus' 
-        # 'context_adacad_plus'
+        'context_adacad_plus'
         ]
     for strategy, variant in itertools.product(strategies, variants):
         method = "knnlm"

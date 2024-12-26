@@ -57,7 +57,8 @@ def assign_args_modifications(args):
         args.max_new_tokens = 300
         
     if 'plus' in args.variant:
-        if 'cuad' in args.dataset or 'obli_qa' in args.dataset:
+        # if 'cuad' in args.dataset or 'obli_qa' in args.dataset:
+        if 'obli_qa' in args.dataset:
             args.use_faiss = True
         else:
             args.use_faiss = args.use_faiss == 1

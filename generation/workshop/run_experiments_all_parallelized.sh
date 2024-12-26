@@ -32,7 +32,6 @@ instructions=(1)
 cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
 knnlm_variants=(
-    # normal
     context 
     context_adacad 
     # plus
@@ -40,15 +39,15 @@ knnlm_variants=(
     context_adacad_plus
     )
 datasets=(
-    clerc
     cuad
+    obli_qa
+    clerc
     echr_qa
     oal_qa
-    obli_qa
     )
 # dataset_percentage=0.01
-dataset_percentage=0.1
-# dataset_percentage=1.0
+# dataset_percentage=0.1
+dataset_percentage=1.0
 
 # Function to wait for an available GPU
 wait_for_gpu() {
