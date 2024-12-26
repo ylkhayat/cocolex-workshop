@@ -6,7 +6,6 @@ from .dataloader_extras import (
     dataset_to_prompt_suffix
     )
 from datasets import load_dataset
-import copy
 import sys
 import os
 
@@ -91,7 +90,17 @@ class ModelInputPreprocessor:
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "obli_qa":
+            if 'oracle_passages' in self.setup:
+                print("[!] oracle passages data not supported for ObliQA.")
+                sys.exit(0)
             dataset_repo_name_prefix = "OBLI_QA"
+            workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
+            self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
+        elif self.dataset == "oal_qa":
+            if 'oracle_passages' in self.setup:
+                print("[!] oracle passages data not supported for ObliQA.")
+                sys.exit(0)
+            dataset_repo_name_prefix = "OAL_QA"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "echr_qa":

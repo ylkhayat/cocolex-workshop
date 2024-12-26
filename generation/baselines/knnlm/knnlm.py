@@ -1,4 +1,5 @@
 from generation.baselines.cad.cad import CAD
+from generation.workshop.time_monitor import GenerationTimeMonitor
 from more_itertools import chunked
 from sklearn.neighbors import NearestNeighbors
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -9,7 +10,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from generation.workshop.time_monitor import GenerationTimeMonitor
 
 class KNNLM:
     def __init__(self, model_name: str, device: Union[int,str] = 0, compile: bool = True):
@@ -331,8 +331,8 @@ class KNNLM:
 
         if generate_time_report:
             average_tokenized_reference_length = sum(
-                len(self.tokenizer(reference, return_tensors="pt")['input_ids'][0])
-                for reference in references
+                len(self.tokenizer(reference[1], return_tensors="pt")['input_ids'][0])
+                for reference in references[0]
             ) / len(references)
             monitor.set_lengths(
                 tokenized_context_length=self.tokenizer(contexts[0], return_tensors="pt")['input_ids'].shape[1],

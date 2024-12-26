@@ -11,6 +11,11 @@ dataset_to_system_prompt = {
         "Instead, only provide exact excerpts from the regulatory text that are relevant to the question, "
         "verbatim and without additional commentary."
     ),
+    "oal_qa": (
+        "You are an Australian legal expert providing answers to legal questions based on referenced cases and judgments. "
+        "Your responses must cite the exact text from the provided context and align with Australian legal citation standards. "
+        "Avoid making assumptions or interpretations beyond the provided information."
+    )
 }
 
 dataset_to_context_prefix = {
@@ -30,6 +35,11 @@ dataset_to_context_prefix = {
     "obli_qa": (
         "Below are the only regulatory documents that serve as your knowledge base."
     ),
+    "oal_qa": (
+        "The following Australian legal cases and documents were retrieved to assist in answering the question. "
+        "You must reference these documents in your answer. (e.g., [{joined_retrieved_ids}]). "
+        "Use exact excerpts from these documents wherever possible."
+    )
 }
 
 dataset_to_prompt_prefix = {
@@ -55,6 +65,13 @@ dataset_to_prompt_prefix = {
         "Extract only the directly relevant regulatory text segments related to the user's query. "
         "Do not answer or provide explanations, only produce the exact text segments that apply."
     ),
+    "oal_qa": (
+        "Answer the following question using the referenced Australian legal cases and documents. "
+        "Use the exact language from the context wherever applicable. "
+        "Ensure citations follow Australian legal standards. "
+        "If the context does not contain relevant information, state 'No relevant information found in the document.' "
+        "Question: "
+    )
 }
 
 dataset_to_prompt_suffix = {
@@ -70,6 +87,13 @@ dataset_to_prompt_suffix = {
     "obli_qa": (
         "\n"
         "Answer the question through providing the exact relevant text segments as they appear in the regulatory document. "
+        "\n"
+        "Answer: "
+    ),
+    "oal_qa": (
+        "\n"
+        "Answer the question using the exact text from the retrieved Australian legal documents. "
+        "Ensure all responses are properly cited. "
         "\n"
         "Answer: "
     )

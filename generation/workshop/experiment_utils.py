@@ -51,6 +51,8 @@ def assign_args_modifications(args):
     elif 'cuad' in args.dataset:
         args.max_new_tokens = 50
         args.top_k_passages = 10
+    elif 'oal_qa' in args.dataset:
+        args.max_new_tokens = 100
     elif 'echr' in args.dataset:
         args.max_new_tokens = 300
         

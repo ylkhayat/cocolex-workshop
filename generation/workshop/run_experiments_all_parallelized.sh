@@ -22,8 +22,8 @@ models=(
     Equall/Saul-7B-Instruct-v1 
     )
 setups=(
-    bm25_oracle_passages_oracle_documents 
     bm25_relevant_passages_oracle_documents 
+    bm25_oracle_passages_oracle_documents 
     bm25_noisy_oracle_passages_oracle_documents
     # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
     # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
@@ -43,11 +43,12 @@ datasets=(
     clerc
     cuad
     echr_qa
+    oal_qa
     obli_qa
     )
 # dataset_percentage=0.01
-# dataset_percentage=0.1
-dataset_percentage=1.0
+dataset_percentage=0.1
+# dataset_percentage=1.0
 
 # Function to wait for an available GPU
 wait_for_gpu() {

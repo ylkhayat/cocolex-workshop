@@ -91,8 +91,8 @@ def prepare_datasets(model, config):
     datasets = [
         "clerc",
         "echr_qa",
+        "oal_qa",
         # must be last because of args modifications
-        # "oal_qa",
         "cuad",
         "obli_qa",
     ]
@@ -329,11 +329,16 @@ def run_experiment_knnlm():
     k = 10
     args.method = method
     print_args(args)
-    strategies = ['constant', 'entropy']
-    variants = ['context',
-                'context_adacad',
-                'context_plus' 
-                'context_adacad_plus']
+    strategies = [
+        # 'constant',
+        'entropy'
+        ]
+    variants = [
+        # 'context',
+        # 'context_adacad',
+        'context_plus' 
+        # 'context_adacad_plus'
+        ]
     for strategy, variant in itertools.product(strategies, variants):
         method = "knnlm"
         if strategy == 'constant' and variant != 'context':
@@ -406,7 +411,7 @@ def run_experiment_knnlm():
     torch.cuda.empty_cache()
     gc.collect()
 
-run_experiment_rag()
-run_experiment_cad()
+# run_experiment_rag()
+# run_experiment_cad()
 run_experiment_knnlm()
 send_slack_notification("[!] Time-Cost Experiment completed!")
