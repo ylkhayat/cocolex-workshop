@@ -8,151 +8,105 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { Sidebar } from '@/components/ui/sidebar';
 import experimentsData from '@/experiments.json';
+import { AppSidebar } from '@/components/experiments/app-sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger
+} from '@/components/ui/sidebar';
+import { useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
+import React from 'react';
 
-export default function ExperimentsPage() {
-  const [selectedExperiment, setSelectedExperiment] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [openCategories, setOpenCategories] = useState({});
-  const toggleCategory = (categoryName) => {
-    setOpenCategories((prev) => ({
-      ...prev,
-      [categoryName]: !prev[categoryName]
-    }));
-  };
+function findModelFromPath(data: any[], path: string): any | null {
+  const relevantPath = path.split('basement/')[1];
+  const [dataset, split, setup, topK, model] = relevantPath.split('/');
+  const datasetData = data.find((d) => d.name === dataset);
+  if (datasetData) {
+    const splitData = datasetData.splits.find((s) => s.name === split);
+    if (splitData) {
+      const setupData = splitData.setups.find((s) => s.name === setup);
+      if (setupData) {
+        const topKData = setupData.topKs.find((t) => t.name === topK);
+        if (topKData) {
+          return topKData.models.find((m) => m.name === model);
+        }
+      }
+    }
+  }
+  return null;
+}
 
-  const handleExperimentClick = (experiment) => {
-    setSelectedExperiment(experiment);
-  };
+function buildBreadcrumb(path: string) {
+  // Split on "/" or otherwise parse to build an array of path segments for the breadcrumb.
+  return path.split('/').slice(-5); // Example: dataset -> split -> setup -> topK -> model
+}
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedExperiment(null);
-  };
+export default function Page() {
+  const searchParams = useSearchParams();
+  const modelPath = searchParams.get('model');
+  const selectedModel = useMemo(
+    () => (modelPath ? findModelFromPath(experimentsData, modelPath) : null),
+    [modelPath]
+  );
+
+  console.log(selectedModel);
+
+  const breadcrumbItems = useMemo(
+    () => (modelPath ? buildBreadcrumb(modelPath) : []),
+    [modelPath]
+  );
 
   return (
-    <div className="flex">
-      <Sidebar>
-        <div className="space-y-2 p-4">
-          {experimentsData.map((dataset) => (
-            <div key={dataset.name} className="rounded-lg space-y-2">
-              <div
-                className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
-                onClick={() => toggleCategory(dataset.name)}
-              >
-                {dataset.name.toUpperCase()}
-              </div>
-              {openCategories[dataset.name] && (
-                <div className="pl-4 space-y-2">
-                  {dataset.splits.map((split) => (
-                    <div key={split.name} className="rounded-lg space-y-2">
-                      <div
-                        className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
-                        onClick={() => toggleCategory(split.name)}
-                      >
-                        {split.name.toUpperCase()}
-                      </div>
-                      {openCategories[split.name] && (
-                        <div className="pl-4 space-y-2">
-                          {split.setups.map((setup) => {
-                            const shortSetup = setup.name
-                              .split('_')
-                              .map((s) => s[0])
-                              .join('');
-                            return (
-                              <div
-                                key={setup.name}
-                                className="rounded-lg space-y-2"
-                              >
-                                <div
-                                  className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
-                                  onClick={() => toggleCategory(setup.name)}
-                                >
-                                  {shortSetup.toUpperCase()}
-                                </div>
-                                {openCategories[setup.name] && (
-                                  <div className="pl-4 space-y-2">
-                                    {setup.topKs.map((topK) => (
-                                      <div
-                                        key={topK.name}
-                                        className="rounded-lg space-y-2"
-                                      >
-                                        <div
-                                          className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
-                                          onClick={() =>
-                                            toggleCategory(topK.name)
-                                          }
-                                        >
-                                          {topK.name.toUpperCase()}
-                                        </div>
-                                        {openCategories[topK.name] && (
-                                          <div className="pl-4 space-y-2">
-                                            {topK.models.map((model) => (
-                                              <div
-                                                key={model.name}
-                                                className="rounded-lg space-y-2"
-                                              >
-                                                <div
-                                                  className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
-                                                  onClick={() =>
-                                                    handleExperimentClick(model)
-                                                  }
-                                                >
-                                                  {model.name}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </Sidebar>
-      <div className="flex-1 p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Experiments</CardTitle>
-            <CardDescription>
-              Select an experiment to view its details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedExperiment ? (
-              <div>
-                <h2>{selectedExperiment.name}</h2>
-                <pre>{JSON.stringify(selectedExperiment.meta, null, 2)}</pre>
-                <pre>{JSON.stringify(selectedExperiment.scores, null, 2)}</pre>
-              </div>
-            ) : (
-              <p>No experiment selected.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <Modal isOpen={isModalOpen} onClose={closeModal}>
-        {selectedExperiment && (
-          <div>
-            <h2>{selectedExperiment.name}</h2>
-            <pre>{JSON.stringify(selectedExperiment.experiments, null, 2)}</pre>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
+          <div className="flex items-center gap-2 px-3">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbItems.map((item, idx) => (
+                  <React.Fragment key={idx}>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">{item}</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    {idx < breadcrumbItems.length - 1 && (
+                      <BreadcrumbSeparator />
+                    )}
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
-        )}
-      </Modal>
-    </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min">
+            {selectedModel?.experiments?.length ? (
+              selectedModel.experiments.map((exp) => (
+                <div key={exp.name}>
+                  <h3>{exp.name}</h3>
+                  {/* Show any meta or results as needed */}
+                </div>
+              ))
+            ) : (
+              <p>No experiments found.</p>
+            )}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
