@@ -8,8 +8,8 @@ import {
   Settings,
   ShoppingCart,
   Users2,
-  Experiment,
-  Annotation
+  LucideGitCompareArrows as Experiment,
+  LucideAccessibility as Annotation
 } from 'lucide-react';
 
 import {

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from '@reach/dialog';
+import { Dialog, DialogContent, DialogOverlay } from '@reach/dialog';
 import '@reach/dialog/styles.css';
 
 interface ModalProps {
@@ -14,7 +14,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     <Dialog isOpen={isOpen} onDismiss={onClose}>
       <DialogOverlay />
       <DialogContent>
-        <DialogTitle>{title}</DialogTitle>
+        <p>{title}</p>
         {children}
         <button onClick={onClose}>Close</button>
       </DialogContent>

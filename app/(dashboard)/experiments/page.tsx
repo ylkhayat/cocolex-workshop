@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -14,10 +16,16 @@ import experimentsData from '@/experiments.json';
 export default function ExperimentsPage() {
   const [selectedExperiment, setSelectedExperiment] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [openCategories, setOpenCategories] = useState({});
+  const toggleCategory = (categoryName) => {
+    setOpenCategories((prev) => ({
+      ...prev,
+      [categoryName]: !prev[categoryName]
+    }));
+  };
 
   const handleExperimentClick = (experiment) => {
     setSelectedExperiment(experiment);
-    setIsModalOpen(true);
   };
 
   const closeModal = () => {
@@ -28,34 +36,93 @@ export default function ExperimentsPage() {
   return (
     <div className="flex">
       <Sidebar>
-        {experimentsData.splits.map((split) => (
-          <div key={split.name}>
-            <h2>{split.name}</h2>
-            {split.setups.map((setup) => (
-              <div key={setup.name}>
-                <h3>{setup.name}</h3>
-                {setup.topKs.map((topK) => (
-                  <div key={topK.name}>
-                    <h4>{topK.name}</h4>
-                    {topK.models.map((model) => (
-                      <div key={model.name}>
-                        <h5>{model.name}</h5>
-                        {model.experiments.map((experiment) => (
-                          <Button
-                            key={experiment.name}
-                            onClick={() => handleExperimentClick(experiment)}
-                          >
-                            {experiment.name}
-                          </Button>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ))}
+        <div className="space-y-2 p-4">
+          {experimentsData.map((dataset) => (
+            <div key={dataset.name} className="rounded-lg space-y-2">
+              <div
+                className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
+                onClick={() => toggleCategory(dataset.name)}
+              >
+                {dataset.name.toUpperCase()}
               </div>
-            ))}
-          </div>
-        ))}
+              {openCategories[dataset.name] && (
+                <div className="pl-4 space-y-2">
+                  {dataset.splits.map((split) => (
+                    <div key={split.name} className="rounded-lg space-y-2">
+                      <div
+                        className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
+                        onClick={() => toggleCategory(split.name)}
+                      >
+                        {split.name.toUpperCase()}
+                      </div>
+                      {openCategories[split.name] && (
+                        <div className="pl-4 space-y-2">
+                          {split.setups.map((setup) => {
+                            const shortSetup = setup.name
+                              .split('_')
+                              .map((s) => s[0])
+                              .join('');
+                            return (
+                              <div
+                                key={setup.name}
+                                className="rounded-lg space-y-2"
+                              >
+                                <div
+                                  className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
+                                  onClick={() => toggleCategory(setup.name)}
+                                >
+                                  {shortSetup.toUpperCase()}
+                                </div>
+                                {openCategories[setup.name] && (
+                                  <div className="pl-4 space-y-2">
+                                    {setup.topKs.map((topK) => (
+                                      <div
+                                        key={topK.name}
+                                        className="rounded-lg space-y-2"
+                                      >
+                                        <div
+                                          className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
+                                          onClick={() =>
+                                            toggleCategory(topK.name)
+                                          }
+                                        >
+                                          {topK.name.toUpperCase()}
+                                        </div>
+                                        {openCategories[topK.name] && (
+                                          <div className="pl-4 space-y-2">
+                                            {topK.models.map((model) => (
+                                              <div
+                                                key={model.name}
+                                                className="rounded-lg space-y-2"
+                                              >
+                                                <div
+                                                  className="cursor-pointer hover:bg-gray-800 px-3 py-2 rounded-lg border border-white"
+                                                  onClick={() =>
+                                                    handleExperimentClick(model)
+                                                  }
+                                                >
+                                                  {model.name}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </Sidebar>
       <div className="flex-1 p-4">
         <Card>
@@ -82,7 +149,7 @@ export default function ExperimentsPage() {
         {selectedExperiment && (
           <div>
             <h2>{selectedExperiment.name}</h2>
-            <pre>{JSON.stringify(selectedExperiment.results, null, 2)}</pre>
+            <pre>{JSON.stringify(selectedExperiment.experiments, null, 2)}</pre>
           </div>
         )}
       </Modal>

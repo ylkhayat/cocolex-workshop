@@ -1,8 +1,15 @@
+'use client';
+
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 
 export default function AnnotatePage() {
   const [formData, setFormData] = useState({
@@ -40,7 +47,10 @@ export default function AnnotatePage() {
       <CardContent>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700"
+            >
               Name
             </label>
             <Input
@@ -53,7 +63,10 @@ export default function AnnotatePage() {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700"
+            >
               Description
             </label>
             <Input
@@ -66,10 +79,13 @@ export default function AnnotatePage() {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="annotation" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="annotation"
+              className="block text-sm font-medium text-gray-700"
+            >
               Annotation
             </label>
-            <Textarea
+            <Input
               id="annotation"
               name="annotation"
               value={formData.annotation}

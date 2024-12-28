@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/compat/router';
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -14,12 +14,13 @@ export function Sidebar({ children }: SidebarProps) {
   };
 
   return (
-    <div className="w-64 bg-gray-800 text-white">
+    <div className="min-w-[500px] bg-gray-500 text-white">
       <div className="p-4">
         <h2 className="text-lg font-semibold">Experiments</h2>
       </div>
       <div className="p-4">
-        {React.Children.map(children, (child) => (
+        {children}
+        {/* {React.Children.map(children, (child) => (
           <div className="mb-2">
             <Button
               variant="ghost"
@@ -29,7 +30,7 @@ export function Sidebar({ children }: SidebarProps) {
               {child.props.name}
             </Button>
           </div>
-        ))}
+        ))} */}
       </div>
     </div>
   );
