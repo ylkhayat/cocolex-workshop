@@ -1,33 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import experimentsData from '@/experiments.json';
-import { AppSidebar } from '@/components/experiments/app-sidebar';
+import { ExperimentsList } from '@/components/experiments/experiments-list';
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger
-} from '@/components/ui/sidebar';
+
 import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import React from 'react';
+import { Experiment } from '@/components/experiments/experiment';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { ExperimentSidebar } from '@/components/experiments/experiment-sidebar';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion';
+import { SelectedRecord } from '@/components/experiments/selected-record';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 function findModelFromPath(data: any[], path: string): any | null {
   const relevantPath = path.split('basement/')[1];
@@ -49,7 +55,6 @@ function findModelFromPath(data: any[], path: string): any | null {
 }
 
 function buildBreadcrumb(path: string) {
-  // Split on "/" or otherwise parse to build an array of path segments for the breadcrumb.
   return path.split('/').slice(-5); // Example: dataset -> split -> setup -> topK -> model
 }
 
@@ -61,7 +66,21 @@ export default function Page() {
     [modelPath]
   );
 
-  console.log(selectedModel);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedExperiment, setSelectedExperiment] = useState(null);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+
+  const onDialogChange = (isOpen) => {
+    setIsDialogOpen(isOpen);
+    if (!isOpen) {
+      setSelectedExperiment(null);
+      setSelectedRecord(null);
+    }
+  };
+  const openDialog = (experiment) => {
+    setSelectedExperiment(experiment);
+    setIsDialogOpen(true);
+  };
 
   const breadcrumbItems = useMemo(
     () => (modelPath ? buildBreadcrumb(modelPath) : []),
@@ -69,36 +88,17 @@ export default function Page() {
   );
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-3">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                {breadcrumbItems.map((item, idx) => (
-                  <React.Fragment key={idx}>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="#">{item}</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {idx < breadcrumbItems.length - 1 && (
-                      <BreadcrumbSeparator />
-                    )}
-                  </React.Fragment>
-                ))}
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min">
+    <>
+      <div className="flex flex-1 flex-row gap-4 p-4">
+        <div className="w-1/4">
+          <ExperimentsList />
+        </div>
+        <div className="flex-1 min-h-[100vh] rounded-xl md:min-h-min">
+          <div className="space-y-6">
             {selectedModel?.experiments?.length ? (
               selectedModel.experiments.map((exp) => (
-                <div key={exp.name}>
-                  <h3>{exp.name}</h3>
-                  {/* Show any meta or results as needed */}
+                <div key={exp.name} onClick={() => openDialog(exp)}>
+                  <Experiment data={exp} />
                 </div>
               ))
             ) : (
@@ -106,7 +106,49 @@ export default function Page() {
             )}
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+      <Dialog open={isDialogOpen} onOpenChange={onDialogChange}>
+        <DialogContent className="w-4/5 p-0">
+          <div
+            style={{
+              display: 'flex',
+              height: 'calc(100vh - 4rem)',
+              flexDirection: 'row',
+              padding: '1rem'
+            }}
+          >
+            <div className="w-1/4">
+              <ExperimentSidebar
+                experiment={selectedExperiment}
+                selectRecord={setSelectedRecord}
+              />
+            </div>
+            <div
+              style={{
+                padding: '1rem',
+                overflowY: 'auto'
+              }}
+            >
+              {selectedExperiment && (
+                <div>
+                  <DialogHeader>
+                    <DialogTitle>{selectedExperiment.name}</DialogTitle>
+                  </DialogHeader>
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger>Show Meta?</AccordionTrigger>
+                      <AccordionContent>
+                        <Experiment data={selectedExperiment} />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+              )}
+              {selectedRecord && <SelectedRecord record={selectedRecord} />}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

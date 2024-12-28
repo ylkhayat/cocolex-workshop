@@ -24,7 +24,7 @@ function getModels(dir) {
             .filter((file) => path.extname(file) === '.json');
           model.experiments = metaFiles.map((metaFile) => {
             const resultsBaseName = path.basename(
-              metaFile.replace(/_dp-\d+\.\d+/g, ''),
+              metaFile.replace(/_da-\d+\.\d+/g, ''),
               '.json'
             );
             const metaFilePath = path.join(metaDir, metaFile);
