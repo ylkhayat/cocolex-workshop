@@ -30,8 +30,8 @@
         "lib/*"
       ],
       "public/*": [
-        "public/*"
-      ],
+        "./public/*"
+      ]
     },
     "plugins": [
       {
@@ -43,7 +43,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "public/experiments.json"
   ],
   "exclude": [
     "node_modules"
