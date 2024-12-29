@@ -9,7 +9,6 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import experimentsData from '@/experiments.json';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -32,11 +31,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AnnotatePage() {
   const [formData, setFormData] = useState({
-    dataset: 'obli_qa',
+    dataset: 'echr_qa',
     numberOfAnnotations: 25,
     name: '',
     description: '',
-    annotation: ''
+    annotation: '',
+    evaluations: {}
   });
 
   const [annotations, setAnnotations] = useState([]);
@@ -69,7 +69,8 @@ export default function AnnotatePage() {
       numberOfAnnotations: -1,
       name: '',
       description: '',
-      annotation: ''
+      annotation: '',
+      evaluations: {}
     });
   };
 
@@ -157,7 +158,7 @@ export default function AnnotatePage() {
   const testsList = (
     <div className="w-1/8 border-r p-4">
       <h3 className="text-md font-semibold">Tests</h3>
-      <ul>
+      <ul className="grid grid-cols-2 gap-2">
         {annotations.map((test, index) => (
           <li key={index} className="mb-2">
             <Button variant="outline" onClick={() => setSelectedTest(test)}>
@@ -169,31 +170,139 @@ export default function AnnotatePage() {
     </div>
   );
 
-  // const selectedTestRecords = {
-  //   adacad: annotations.adacad.find(
-  //     (record) => record.meta.docid === selectedTest
-  //   ),
-  //   knnlm_context_entropy: annotations.knnlm_context_entropy.find(
-  //     (record) => record.meta.docid === selectedTest
-  //   ),
-  //   knnlm_context_entropy_plus: annotations.knnlm_context_entropy_plus.find(
-  //     (record) => record.meta.docid === selectedTest
-  //   ),
-  //   rag: annotations.rag.find((record) => record.meta.docid === selectedTest)
-  // };
-
-  // const goldText = selectedTestRecords.adacad?.meta.gold_text || '';
   const goldText = selectedTest?.gold_text || '';
-
   const generatedText = selectedTest?.generations && (
-    <div className="w-1/4 border-l p-4">
+    <div className="w-1/2 border-l p-4">
       <h3 className="text-md font-semibold">Generated Text</h3>
-      {Object.entries(selectedTest?.generations).map(([key, record]) => (
-        <div key={key} className="mt-2">
-          <h4 className="font-semibold">{key.toUpperCase()}</h4>
-          <p className="text-sm">{record?.gen}</p>
-        </div>
-      ))}
+      <Tabs defaultValue="A">
+        <TabsList>
+          <TabsTrigger value="A">A</TabsTrigger>
+          <TabsTrigger value="B">B</TabsTrigger>
+          <TabsTrigger value="C">C</TabsTrigger>
+          <TabsTrigger value="D">D</TabsTrigger>
+        </TabsList>
+        {Object.entries(selectedTest?.generations).map(
+          ([key, record], index) => (
+            <TabsContent key={key} value={String.fromCharCode(65 + index)}>
+              <p className="text-sm">{record}</p>
+              <div className="mt-4">
+                <h4 className="font-semibold">Fluency</h4>
+                <p className="text-xs">
+                  Rate the fluency of the generated text.
+                </p>
+                <ToggleGroup
+                  type="single"
+                  className="w-full"
+                  value={
+                    formData.evaluations[selectedTest?.docid]?.[
+                      key
+                    ]?.fluency?.toString() || ''
+                  }
+                  onValueChange={(value) =>
+                    setFormData((prevFormData) => ({
+                      ...prevFormData,
+                      evaluations: {
+                        ...prevFormData.evaluations,
+                        [selectedTest?.docid]: {
+                          ...prevFormData.evaluations[selectedTest?.docid],
+                          [key]: {
+                            ...prevFormData.evaluations[selectedTest?.docid]?.[
+                              key
+                            ],
+                            fluency: parseInt(value)
+                          }
+                        }
+                      }
+                    }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <ToggleGroupItem key={value} value={value.toString()}>
+                      {value}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold">Correctness</h4>
+                <p className="text-xs">
+                  Rate the correctness of the generated text.
+                </p>
+                <ToggleGroup
+                  type="single"
+                  className="w-full"
+                  value={
+                    formData.evaluations[selectedTest?.docid]?.[
+                      key
+                    ]?.correctness?.toString() || ''
+                  }
+                  onValueChange={(value) =>
+                    setFormData((prevFormData) => ({
+                      ...prevFormData,
+                      evaluations: {
+                        ...prevFormData.evaluations,
+                        [selectedTest?.docid]: {
+                          ...prevFormData.evaluations[selectedTest?.docid],
+                          [key]: {
+                            ...prevFormData.evaluations[selectedTest?.docid]?.[
+                              key
+                            ],
+                            correctness: parseInt(value)
+                          }
+                        }
+                      }
+                    }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <ToggleGroupItem key={value} value={value.toString()}>
+                      {value}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold">Faithfulness</h4>
+                <p className="text-xs">
+                  Rate the faithfulness of the generated text.
+                </p>
+                <ToggleGroup
+                  type="single"
+                  className="w-full"
+                  value={
+                    formData.evaluations[selectedTest?.docid]?.[
+                      key
+                    ]?.faithfulness?.toString() || ''
+                  }
+                  onValueChange={(value) =>
+                    setFormData((prevFormData) => ({
+                      ...prevFormData,
+                      evaluations: {
+                        ...prevFormData.evaluations,
+                        [selectedTest?.docid]: {
+                          ...prevFormData.evaluations[selectedTest?.docid],
+                          [key]: {
+                            ...prevFormData.evaluations[selectedTest?.docid]?.[
+                              key
+                            ],
+                            faithfulness: parseInt(value)
+                          }
+                        }
+                      }
+                    }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <ToggleGroupItem key={value} value={value.toString()}>
+                      {value}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+            </TabsContent>
+          )
+        )}
+      </Tabs>
     </div>
   );
 
@@ -218,16 +327,17 @@ export default function AnnotatePage() {
         </div>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>Annotate</CardTitle>
-            <CardDescription>Submit your annotations below.</CardDescription>
-          </CardHeader>
           <CardContent>
             <div className="mt-8">
-              <h2 className="text-lg font-medium">Annotations</h2>
+              {selectedTest && (
+                <p className="text-md font-semibold">
+                  Currently Viewing: Test{' '}
+                  {annotations.indexOf(selectedTest) + 1}
+                </p>
+              )}
               <div className="flex">
                 {testsList}
-                <div className="w-1/4 p-4">
+                <div className="w-1/2 p-4">
                   <div className="mb-4">
                     <h3 className="text-md font-semibold">Previous Text</h3>
                     <p className="text-sm">
