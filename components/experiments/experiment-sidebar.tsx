@@ -1,7 +1,4 @@
 import * as React from 'react';
-import { GalleryVerticalEnd } from 'lucide-react';
-import experimentsData from '@/experiments.json';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export function ExperimentSidebar({ experiment, selectRecord }) {

@@ -161,7 +161,9 @@ export default function Page() {
                   </DialogHeader>
                   <Accordion type="single" collapsible>
                     <AccordionItem value="item-1">
-                      <AccordionTrigger>Show Meta?</AccordionTrigger>
+                      <AccordionTrigger>
+                        <Button>Show Meta</Button>
+                      </AccordionTrigger>
                       <AccordionContent>
                         <Experiment data={selectedExperiment} />
                       </AccordionContent>
