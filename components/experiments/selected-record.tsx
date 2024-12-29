@@ -1,4 +1,4 @@
-export function SelectedRecord({ record }) {
+export function SelectedRecord({ record }: any) {
   const cellStyle = {
     overflow: 'auto',
     maxHeight: '50vh'

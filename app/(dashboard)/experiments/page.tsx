@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Modal } from '@/components/ui/modal';
 import experimentsData from '@/experiments.json';
 import { ExperimentsList } from '@/components/experiments/experiments-list';
@@ -8,10 +8,8 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbList,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
 
 import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
@@ -47,13 +45,13 @@ function findModelFromPath(data: any[], path: string): any | null {
   const [dataset, split, setup, topK, model] = relevantPath.split('/');
   const datasetData = data.find((d) => d.name === dataset);
   if (datasetData) {
-    const splitData = datasetData.splits.find((s) => s.name === split);
+    const splitData = datasetData.splits.find((s: any) => s.name === split);
     if (splitData) {
-      const setupData = splitData.setups.find((s) => s.name === setup);
+      const setupData = splitData.setups.find((s: any) => s.name === setup);
       if (setupData) {
-        const topKData = setupData.topKs.find((t) => t.name === topK);
+        const topKData = setupData.topKs.find((t: any) => t.name === topK);
         if (topKData) {
-          return topKData.models.find((m) => m.name === model);
+          return topKData.models.find((m: any) => m.name === model);
         }
       }
     }
@@ -66,6 +64,14 @@ function buildBreadcrumb(path: string) {
 }
 
 export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ExperimentsPage />
+    </Suspense>
+  );
+}
+
+function ExperimentsPage() {
   const searchParams = useSearchParams();
   const modelPath = searchParams.get('model');
   const selectedModel = useMemo(
@@ -77,14 +83,14 @@ export default function Page() {
   const [selectedExperiment, setSelectedExperiment] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const onDialogChange = (isOpen) => {
+  const onDialogChange = (isOpen: boolean) => {
     setIsDialogOpen(isOpen);
     if (!isOpen) {
       setSelectedExperiment(null);
       setSelectedRecord(null);
     }
   };
-  const openDialog = (experiment) => {
+  const openDialog = (experiment: any) => {
     setSelectedExperiment(experiment);
     setIsDialogOpen(true);
   };
@@ -119,7 +125,7 @@ export default function Page() {
             </CardHeader>
             <CardContent className="space-y-6">
               {selectedModel?.experiments?.length ? (
-                selectedModel.experiments.map((exp) => (
+                selectedModel.experiments.map((exp: any) => (
                   <div key={exp.name} onClick={() => openDialog(exp)}>
                     <Experiment data={exp} />
                   </div>
@@ -157,7 +163,9 @@ export default function Page() {
               {selectedExperiment && (
                 <div>
                   <DialogHeader>
-                    <DialogTitle>{selectedExperiment.name}</DialogTitle>
+                    <DialogTitle>
+                      {(selectedExperiment as any).name}
+                    </DialogTitle>
                   </DialogHeader>
                   <Accordion type="single" collapsible>
                     <AccordionItem value="item-1">

@@ -30,7 +30,14 @@ import { Loader } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AnnotatePage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    dataset: string;
+    numberOfAnnotations: number;
+    name: string;
+    description: string;
+    annotation: string;
+    evaluations: Record<string, Record<string, Record<string, number>>>;
+  }>({
     dataset: 'echr_qa',
     numberOfAnnotations: 25,
     name: '',
@@ -39,12 +46,24 @@ export default function AnnotatePage() {
     evaluations: {}
   });
 
-  const [annotations, setAnnotations] = useState([]);
+  const [annotations, setAnnotations] = useState<
+    {
+      docid: string;
+      gold_text: string;
+      previous_text: string;
+      generations: Record<string, string>;
+    }[]
+  >([]);
 
   const [loading, setLoading] = useState(false);
-  const [selectedTest, setSelectedTest] = useState(null);
+  const [selectedTest, setSelectedTest] = useState<{
+    docid: string;
+    gold_text: string;
+    previous_text: string;
+    generations: Record<string, string>;
+  } | null>(null);
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -52,12 +71,12 @@ export default function AnnotatePage() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
     setAnnotations((prevAnnotations) => ({
       ...prevAnnotations,
       [formData.name]: [
-        ...prevAnnotations[formData.name],
+        ...(prevAnnotations[formData.name as any] as any),
         {
           description: formData.description,
           annotation: formData.annotation

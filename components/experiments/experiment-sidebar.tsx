@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 
-export function ExperimentSidebar({ experiment, selectRecord }) {
+export function ExperimentSidebar({ experiment, selectRecord }: any) {
   const resultsPath = experiment?.results?.path;
   const [loading, setLoading] = React.useState(true);
   const [experimentRecords, setExperimentRecords] = React.useState(null);
@@ -45,7 +45,7 @@ export function ExperimentSidebar({ experiment, selectRecord }) {
       <p>Experiment Records</p>
       <div style={{ overflowY: 'auto' }}>
         <ul style={{ gap: '2px' }}>
-          {experimentRecords.map((record, index) => (
+          {(experimentRecords as any).map((record: any, index: number) => (
             <li key={index}>
               <Button variant="outline" onClick={() => selectRecord(record)}>
                 {`Record ${index + 1}: ${record.meta.docid}`}

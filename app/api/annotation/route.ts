@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   }
   const url = new URL(request.url);
   const datasetName = url.searchParams.get('dataset');
-  const numAnnotations = parseInt(url.searchParams.get('number'), 10);
+  const numAnnotations = parseInt(url.searchParams.get('number') || '0', 10);
   if (!datasetName || isNaN(numAnnotations)) {
     return new Response(
       JSON.stringify({ error: 'Dataset and number are required' }),
@@ -44,14 +44,14 @@ export async function GET(request: Request) {
     }
 
     const split = dataset.splits.find((s) => s.name === 'test');
-    const setup = split.setups.find(
+    const setup = split?.setups.find(
       (s) => s.name === 'bm25_relevant_passages_oracle_documents'
     );
     const topK =
       datasetName === 'cuad' || datasetName === 'obli_qa'
-        ? setup.topKs.find((t) => t.name === '10')
-        : setup.topKs.find((t) => t.name === '3');
-    const model = topK.models.find((m) =>
+        ? setup?.topKs.find((t) => t.name === '10')
+        : setup?.topKs.find((t) => t.name === '3');
+    const model = topK?.models.find((m) =>
       m.name.includes('Mistral-7B-Instruct-v0.3')
     );
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       'knnlm-context-entropy',
       'knnlm-context-plus-entropy'
     ];
-    const experiments = model.experiments.filter((exp) =>
+    const experiments = model?.experiments.filter((exp) =>
       experimentNames.some((name) => exp.name.startsWith(name))
     );
 
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     const tests = [];
 
     const pathsSet = new Set();
-    for (const experiment of experiments) {
+    for (const experiment of experiments as any) {
       if (
         experiment.name.includes('knnlm-context-plus-entropy') &&
         datasetName === 'obli_qa' &&
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     const allRecords = [];
     for (const path of paths) {
       const response = await fetch(
-        `${url.origin}/api/experiment?path=${encodeURIComponent(path)}`
+        `${url.origin}/api/experiment?path=${encodeURIComponent(path as any)}`
       );
       const records = await response.json();
       allRecords.push(records);
@@ -103,10 +103,10 @@ export async function GET(request: Request) {
 
     const commonDocIds = allRecords.reduce(
       (commonIds, records) => {
-        const docIds = records.map((record) => record.meta.docid);
-        return commonIds.filter((id) => docIds.includes(id));
+        const docIds = records.map((record: any) => record.meta.docid);
+        return commonIds.filter((id: any) => docIds.includes(id));
       },
-      allRecords[0].map((record) => record.meta.docid)
+      allRecords[0].map((record: any) => record.meta.docid)
     );
     console.log(commonDocIds.length);
     const filteredDocIds = commonDocIds
@@ -114,12 +114,14 @@ export async function GET(request: Request) {
       .slice(0, numAnnotations);
 
     const filteredRecords = allRecords.map((records) =>
-      records.filter((record) => filteredDocIds.includes(record.meta.docid))
+      records.filter((record: any) =>
+        filteredDocIds.includes(record.meta.docid)
+      )
     );
 
     const sortedFilteredRecords = filteredRecords.map((records) =>
       records.sort(
-        (a, b) =>
+        (a: any, b: any) =>
           filteredDocIds.indexOf(a.meta.docid) -
           filteredDocIds.indexOf(b.meta.docid)
       )
@@ -127,8 +129,10 @@ export async function GET(request: Request) {
 
     let index = 0;
     for (const records of sortedFilteredRecords) {
-      const docIds = records.map((record) => record.meta.docid);
-      if (!filteredDocIds.every((id, idx) => id === docIds[idx])) {
+      const docIds = records.map((record: any) => record.meta.docid);
+      if (
+        !filteredDocIds.every((id: string, idx: number) => id === docIds[idx])
+      ) {
         return new Response(
           JSON.stringify({ error: 'DocIDs are not sorted consistently' }),
           {
@@ -136,20 +140,23 @@ export async function GET(request: Request) {
           }
         );
       }
-      const experimentKey = paths[index]
+      const experimentKey = (paths[index] as string)
         .split('generations/')[1]
-        .split('__')[0];
+        .split('__')[0] as keyof typeof results;
       console.log('experimentKey', experimentKey);
-      results[experimentKey].push(...records);
+      results[experimentKey].push(...(records as []));
       index++;
     }
 
     for (let i = 0; i < numAnnotations; i++) {
-      const ragRecord = results['rag'][i];
-      const adacadRecord = results['adacad'][i];
-      const knnlmContextEntropyRecord = results['knnlm-context-entropy'][i];
-      const knnlmContextPlusEntropyRecord =
-        results['knnlm-context-plus-entropy'][i];
+      const ragRecord = results['rag'][i] as any;
+      const adacadRecord = results['adacad'][i] as any;
+      const knnlmContextEntropyRecord = results['knnlm-context-entropy'][
+        i
+      ] as any;
+      const knnlmContextPlusEntropyRecord = results[
+        'knnlm-context-plus-entropy'
+      ][i] as any;
 
       const docidInconsistency =
         ragRecord.meta.docid != adacadRecord.meta.docid ||
