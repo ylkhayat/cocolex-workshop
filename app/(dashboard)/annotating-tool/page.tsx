@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import experimentsData from '@/public/experiments.json';
+import experimentsData from 'public/experiments.json';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Accordion,
@@ -28,34 +29,75 @@ import {
 } from '@/components/ui/select';
 import { Loader } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+
+type FormValues = {
+  id: number | null;
+  dataset: string;
+  numberOfAnnotations: number;
+  username: string;
+  evaluations: Record<string, Record<string, Record<string, number>>>;
+  tests: {
+    docid: string;
+    gold_text: string;
+    previous_text: string;
+    generations: Record<string, string>;
+  }[];
+};
 
 export default function AnnotatePage() {
-  const [formData, setFormData] = useState<{
-    dataset: string;
-    numberOfAnnotations: number;
-    name: string;
-    description: string;
-    annotation: string;
-    evaluations: Record<string, Record<string, Record<string, number>>>;
-  }>({
-    dataset: 'echr_qa',
-    numberOfAnnotations: 25,
-    name: '',
-    description: '',
-    annotation: '',
-    evaluations: {}
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors }
+  } = useForm<FormValues>({
+    defaultValues: {
+      id: null,
+      dataset: 'echr_qa',
+      numberOfAnnotations: 5,
+      username: 'lawyer',
+      evaluations: {},
+      tests: []
+    }
   });
-
-  const [annotations, setAnnotations] = useState<
+  const [savedAnnotations, setSavedAnnotations] = useState<
     {
-      docid: string;
-      gold_text: string;
-      previous_text: string;
-      generations: Record<string, string>;
+      id: number;
+      dataset: string;
+      numberOfAnnotations: number;
+      username: string;
+      evaluations: Record<string, Record<string, Record<string, number>>>;
+      tests: {
+        docid: string;
+        gold_text: string;
+        previous_text: string;
+        generations: Record<string, string>;
+      }[];
     }[]
   >([]);
-
   const [loading, setLoading] = useState(false);
+  const [id, dataset, numberOfAnnotations, username, evaluations, tests] =
+    useWatch({
+      control,
+      name: [
+        'id',
+        'dataset',
+        'numberOfAnnotations',
+        'username',
+        'evaluations',
+        'tests'
+      ]
+    });
+
   const [selectedTest, setSelectedTest] = useState<{
     docid: string;
     gold_text: string;
@@ -63,47 +105,75 @@ export default function AnnotatePage() {
     generations: Record<string, string>;
   } | null>(null);
 
-  const handleChange = (e: any) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
+  const onSubmit = async (data: FormValues) => {
+    const isValid = tests.every((test) => {
+      const evaluations = data.evaluations[test.docid];
+      return (
+        evaluations &&
+        Object.values(evaluations).every((evals) => {
+          return evals.fluency && evals.correctness && evals.faithfulness;
+        })
+      );
     });
-  };
 
-  const handleSubmit = (e: any) => {
-    e.preventDefault();
-    setAnnotations((prevAnnotations) => ({
-      ...prevAnnotations,
-      [formData.name]: [
-        ...(prevAnnotations[formData.name as any] as any),
-        {
-          description: formData.description,
-          annotation: formData.annotation
-        }
-      ]
-    }));
-    setFormData({
-      dataset: '',
-      numberOfAnnotations: -1,
-      name: '',
-      description: '',
-      annotation: '',
-      evaluations: {}
-    });
+    if (!isValid) {
+      alert('Please complete the evaluations for all tests.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const url = data.id ? `/api/annotations/${data.id}` : '/api/annotations';
+      const method = data.id ? 'PUT' : 'POST';
+
+      await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      reset();
+      alert('Annotation saved successfully!');
+    } catch (error) {
+      console.error('Error saving annotation:', error);
+      alert('Failed to save annotation.');
+    } finally {
+      setLoading(false);
+    }
+    fetchSavedAnnotations();
   };
 
   useEffect(() => {
-    if (formData.dataset && formData.numberOfAnnotations > 0) {
+    if (dataset && numberOfAnnotations > 0 && tests.length === 0) {
       setLoading(true);
-      fetch(
-        `/api/annotation?dataset=${formData.dataset}&number=${formData.numberOfAnnotations}`
-      )
+      fetch(`/api/tests?dataset=${dataset}&number=${numberOfAnnotations}`)
         .then((response) => response.json())
-        .then((data) => setAnnotations(data))
+        .then((data) => {
+          reset({
+            dataset,
+            numberOfAnnotations,
+            username,
+            evaluations: {},
+            tests: data
+          });
+        })
         .finally(() => setLoading(false));
     }
-  }, [formData.dataset, formData.numberOfAnnotations]);
+  }, [dataset, numberOfAnnotations, tests, reset]);
+
+  const fetchSavedAnnotations = () => {
+    setLoading(true);
+    fetch(`/api/annotations`)
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => setSavedAnnotations(data))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    fetchSavedAnnotations();
+  }, []);
 
   const datasetPicker = (
     <Card>
@@ -112,29 +182,32 @@ export default function AnnotatePage() {
         <CardDescription>Select a dataset to annotate.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Select
-          value={formData.dataset}
-          onValueChange={(value) =>
-            setFormData((prevFormData) => ({
-              ...prevFormData,
-              dataset: value
-            }))
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select a dataset" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Datasets</SelectLabel>
-              {experimentsData.map((dataset) => (
-                <SelectItem key={dataset.name} value={dataset.name}>
-                  {dataset.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <Controller
+          name="dataset"
+          control={control}
+          defaultValue=""
+          rules={{ required: 'Dataset is required' }}
+          render={({ field }) => (
+            <Select {...field}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a dataset" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Datasets</SelectLabel>
+                  {experimentsData.map((dataset) => (
+                    <SelectItem key={dataset.name} value={dataset.name}>
+                      {dataset.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.dataset && (
+          <p className="text-red-500">{errors.dataset.message}</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -147,29 +220,35 @@ export default function AnnotatePage() {
   const numberOfAnnotationsPicker = (
     <Card>
       <CardHeader>
-        <CardTitle>Number of Annotations</CardTitle>
+        <CardTitle>Number of Annotations: {numberOfAnnotations}</CardTitle>
         <CardDescription>
-          Select the number of annotations to display.
+          Select the number of tests to display.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ToggleGroup
-          type="single"
-          className="w-[180px]"
-          value={formData.numberOfAnnotations.toString()}
-          onValueChange={(value) =>
-            setFormData((prevFormData) => ({
-              ...prevFormData,
-              numberOfAnnotations: parseInt(value)
-            }))
-          }
-        >
-          {numberOfAnnotationsOptions.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <Controller
+          name="numberOfAnnotations"
+          control={control}
+          defaultValue={-1}
+          rules={{ required: 'Number of tests is required' }}
+          render={({ field }) => (
+            <ToggleGroup
+              type="single"
+              className="w-[180px]"
+              onValueChange={(value) => field.onChange(value)}
+              value={`${field.value}`}
+            >
+              {numberOfAnnotationsOptions.map((option) => (
+                <ToggleGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          )}
+        />
+        {errors.numberOfAnnotations && (
+          <p className="text-red-500">{errors.numberOfAnnotations.message}</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -178,14 +257,71 @@ export default function AnnotatePage() {
     <div className="w-1/8 border-r p-4">
       <h3 className="text-md font-semibold">Tests</h3>
       <ul className="grid grid-cols-2 gap-2">
-        {annotations.map((test, index) => (
-          <li key={index} className="mb-2">
-            <Button variant="outline" onClick={() => setSelectedTest(test)}>
-              Test {index + 1}
-            </Button>
-          </li>
-        ))}
+        {tests.map((test, index) => {
+          const evaluationKeys = ['fluency', 'correctness', 'faithfulness'];
+          const evaluationsForTest = evaluations?.[test.docid] || {};
+          const completedKeys = Object.keys(evaluationsForTest).filter((key) =>
+            evaluationKeys.every(
+              (evalKey) => evaluationsForTest[key]?.[evalKey]
+            )
+          ).length;
+          const completionPercentage = (completedKeys / 4) * 100;
+          return (
+            <li key={index} className="mb-2">
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedTest(test);
+                }}
+                className={
+                  selectedTest?.docid === test.docid ? 'bg-gray-200' : ''
+                }
+              >
+                Test {index + 1} ({completionPercentage}%)
+              </Button>
+            </li>
+          );
+        })}
       </ul>
+    </div>
+  );
+
+  const savedAnnotationsList = (
+    <div className="w-full p-4">
+      <h3 className="text-md font-semibold">Saved Annotations</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Id</TableHead>
+            <TableHead>Annotator</TableHead>
+            <TableHead>Dataset</TableHead>
+            <TableHead>Number Of Annotations</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {savedAnnotations.map((annotation, index) => (
+            <TableRow key={index}>
+              <TableCell>{annotation.id}</TableCell>
+              <TableCell>{annotation.username}</TableCell>
+              <TableCell>{annotation.dataset}</TableCell>
+              <TableCell>{annotation.numberOfAnnotations}</TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    reset(annotation);
+                  }}
+                >
+                  View
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 
@@ -209,114 +345,75 @@ export default function AnnotatePage() {
                 <p className="text-xs">
                   Rate the fluency of the generated text.
                 </p>
-                <ToggleGroup
-                  type="single"
-                  className="w-full"
-                  value={
-                    formData.evaluations[selectedTest?.docid]?.[
-                      key
-                    ]?.fluency?.toString() || ''
-                  }
-                  onValueChange={(value) =>
-                    setFormData((prevFormData) => ({
-                      ...prevFormData,
-                      evaluations: {
-                        ...prevFormData.evaluations,
-                        [selectedTest?.docid]: {
-                          ...prevFormData.evaluations[selectedTest?.docid],
-                          [key]: {
-                            ...prevFormData.evaluations[selectedTest?.docid]?.[
-                              key
-                            ],
-                            fluency: parseInt(value)
-                          }
-                        }
-                      }
-                    }))
-                  }
-                >
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <ToggleGroupItem key={value} value={value.toString()}>
-                      {value}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                <Controller
+                  key={`evaluations.${selectedTest?.docid}.${key}.fluency`}
+                  name={`evaluations.${selectedTest?.docid}.${key}.fluency`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
               </div>
               <div className="mt-4">
                 <h4 className="font-semibold">Correctness</h4>
                 <p className="text-xs">
                   Rate the correctness of the generated text.
                 </p>
-                <ToggleGroup
-                  type="single"
-                  className="w-full"
-                  value={
-                    formData.evaluations[selectedTest?.docid]?.[
-                      key
-                    ]?.correctness?.toString() || ''
-                  }
-                  onValueChange={(value) =>
-                    setFormData((prevFormData) => ({
-                      ...prevFormData,
-                      evaluations: {
-                        ...prevFormData.evaluations,
-                        [selectedTest?.docid]: {
-                          ...prevFormData.evaluations[selectedTest?.docid],
-                          [key]: {
-                            ...prevFormData.evaluations[selectedTest?.docid]?.[
-                              key
-                            ],
-                            correctness: parseInt(value)
-                          }
-                        }
-                      }
-                    }))
-                  }
-                >
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <ToggleGroupItem key={value} value={value.toString()}>
-                      {value}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                <Controller
+                  key={`evaluations.${selectedTest?.docid}.${key}.correctness`}
+                  name={`evaluations.${selectedTest?.docid}.${key}.correctness`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
               </div>
               <div className="mt-4">
                 <h4 className="font-semibold">Faithfulness</h4>
                 <p className="text-xs">
                   Rate the faithfulness of the generated text.
                 </p>
-                <ToggleGroup
-                  type="single"
-                  className="w-full"
-                  value={
-                    formData.evaluations[selectedTest?.docid]?.[
-                      key
-                    ]?.faithfulness?.toString() || ''
-                  }
-                  onValueChange={(value) =>
-                    setFormData((prevFormData) => ({
-                      ...prevFormData,
-                      evaluations: {
-                        ...prevFormData.evaluations,
-                        [selectedTest?.docid]: {
-                          ...prevFormData.evaluations[selectedTest?.docid],
-                          [key]: {
-                            ...prevFormData.evaluations[selectedTest?.docid]?.[
-                              key
-                            ],
-                            faithfulness: parseInt(value)
-                          }
-                        }
-                      }
-                    }))
-                  }
-                >
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <ToggleGroupItem key={value} value={value.toString()}>
-                      {value}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                <Controller
+                  key={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
+                  name={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
               </div>
             </TabsContent>
           )
@@ -324,36 +421,89 @@ export default function AnnotatePage() {
       </Tabs>
     </div>
   );
+  const annotatorUsername = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Username</CardTitle>
+        <CardDescription>Enter the username of the annotator.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Controller
+          name="username"
+          control={control}
+          defaultValue=""
+          rules={{ required: 'Username is required' }}
+          render={({ field }) => <Input {...field} />}
+        />
+        {errors.username && (
+          <p className="text-red-500">{errors.username.message}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <Accordion type="single" collapsible>
         <AccordionItem value="dataset">
-          <AccordionTrigger>Dataset</AccordionTrigger>
+          <AccordionTrigger>Dataset: {dataset}</AccordionTrigger>
           <AccordionContent>{datasetPicker}</AccordionContent>
         </AccordionItem>
-        {formData.dataset && (
+        {dataset && (
           <AccordionItem value="numberOfAnnotations">
-            <AccordionTrigger>Number of Annotations</AccordionTrigger>
+            <AccordionTrigger>
+              Number of Annotations: {numberOfAnnotations}
+            </AccordionTrigger>
             <AccordionContent>{numberOfAnnotationsPicker}</AccordionContent>
           </AccordionItem>
         )}
       </Accordion>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="username">
+          <AccordionTrigger>Username: {username}</AccordionTrigger>
+          <AccordionContent>{annotatorUsername}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      <Card className="mt-4 mb-4">
+        <CardHeader>
+          <CardTitle>Previously Saved Annotations</CardTitle>
+        </CardHeader>
+        <CardContent>{savedAnnotationsList}</CardContent>
+      </Card>
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <p className="mr-2">Loading annotations...</p>
+          <p className="mr-2">Loading tests...</p>
           <Loader className="animate-spin" />
         </div>
       ) : (
         <Card>
           <CardContent>
             <div className="mt-8">
-              {selectedTest && (
-                <p className="text-md font-semibold">
-                  Currently Viewing: Test{' '}
-                  {annotations.indexOf(selectedTest) + 1}
-                </p>
-              )}
+              <div className="flex justify-between items-center mb-4">
+                {id && (
+                  <>
+                    <p className="text-lg font-semibold">
+                      Editing annotation with id: {id}
+                    </p>
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        reset({
+                          id: null,
+                          dataset: 'echr_qa',
+                          numberOfAnnotations: 5,
+                          username: 'lawyer',
+                          evaluations: {},
+                          tests: []
+                        });
+                      }}
+                    >
+                      New Annotation
+                    </Button>
+                  </>
+                )}
+              </div>
+
               <div className="flex">
                 {testsList}
                 <div className="w-1/2 p-4">
@@ -375,6 +525,9 @@ export default function AnnotatePage() {
           </CardContent>
         </Card>
       )}
-    </>
+      <Button type="submit" className="mt-4">
+        Submit Annotation
+      </Button>
+    </form>
   );
 }

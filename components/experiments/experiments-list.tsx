@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import experimentsData from '@/public/experiments.json';
+import experimentsData from 'public/experiments.json';
 import { useRouter } from 'next/navigation';
 import {
   Card,

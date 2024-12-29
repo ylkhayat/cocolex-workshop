@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import experimentsData from '@/public/experiments.json';
+import experimentsData from 'public/experiments.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +100,6 @@ export async function GET(request: Request) {
       const records = await response.json();
       allRecords.push(records);
     }
-
     const commonDocIds = allRecords.reduce(
       (commonIds, records) => {
         const docIds = records.map((record: any) => record.meta.docid);
@@ -111,7 +110,6 @@ export async function GET(request: Request) {
     const filteredDocIds = commonDocIds
       .sort(() => 0.5 - Math.random())
       .slice(0, numAnnotations);
-
     const filteredRecords = allRecords.map((records) =>
       records.filter((record: any) =>
         filteredDocIds.includes(record.meta.docid)

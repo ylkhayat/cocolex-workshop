@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 
-import experimentsData from '@/public/experiments.json';
+import experimentsData from 'public/experiments.json';
 import { ExperimentsList } from '@/components/experiments/experiments-list';
 import {
   Breadcrumb,

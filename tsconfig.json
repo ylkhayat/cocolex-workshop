@@ -23,12 +23,12 @@
       "@/components/*": [
         "components/*"
       ],
+      "@/hooks/*": [
+        "components/hooks/*"
+      ],
       "@/lib/*": [
         "lib/*"
       ],
-      "@/public/*": [
-        "public/*"
-      ]
     },
     "plugins": [
       {

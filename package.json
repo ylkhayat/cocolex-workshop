@@ -37,6 +37,7 @@
     "prop-types": "^15.8.1",
     "react": "19.0.0-rc-cd22717c-20241013",
     "react-dom": "19.0.0-rc-cd22717c-20241013",
+    "react-hook-form": "^7.54.2",
     "react-resizable-panels": "^2.1.7",
     "server-only": "^0.0.1",
     "tailwind-merge": "^2.4.0",
