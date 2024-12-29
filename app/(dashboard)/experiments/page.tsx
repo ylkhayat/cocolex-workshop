@@ -34,6 +34,13 @@ import {
 import { SelectedRecord } from '@/components/experiments/selected-record';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 
 function findModelFromPath(data: any[], path: string): any | null {
   const relevantPath = path.split('basement/')[1];
@@ -93,20 +100,38 @@ export default function Page() {
         <div className="w-1/4">
           <ExperimentsList />
         </div>
-        <div className="flex-1 min-h-[100vh] rounded-xl md:min-h-min">
-          <div className="space-y-6">
-            {selectedModel?.experiments?.length ? (
-              selectedModel.experiments.map((exp) => (
-                <div key={exp.name} onClick={() => openDialog(exp)}>
-                  <Experiment data={exp} />
-                </div>
-              ))
-            ) : (
-              <p>No experiments found.</p>
-            )}
-          </div>
+        <div className="space-y-6">
+          <Card className="flex-1 min-h-[100vh] rounded-xl md:min-h-min">
+            <CardHeader>
+              <CardTitle>Experiments</CardTitle>
+              <CardDescription>
+                <Breadcrumb>
+                  {breadcrumbItems.map((item, index) => (
+                    <BreadcrumbItem key={index}>
+                      <BreadcrumbLink href="#">{item}</BreadcrumbLink>
+                      {index < breadcrumbItems.length - 1 && (
+                        <BreadcrumbSeparator>/</BreadcrumbSeparator>
+                      )}
+                    </BreadcrumbItem>
+                  ))}
+                </Breadcrumb>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {selectedModel?.experiments?.length ? (
+                selectedModel.experiments.map((exp) => (
+                  <div key={exp.name} onClick={() => openDialog(exp)}>
+                    <Experiment data={exp} />
+                  </div>
+                ))
+              ) : (
+                <p>No experiments found.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
       <Dialog open={isDialogOpen} onOpenChange={onDialogChange}>
         <DialogContent className="w-4/5 p-0">
           <div

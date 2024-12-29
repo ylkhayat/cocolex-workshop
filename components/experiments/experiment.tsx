@@ -7,6 +7,13 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger
+} from '@/components/ui/hover-card';
+import { Button } from '../ui/button';
+import { Badge } from '@/components/ui/badge';
 
 function displayValue(value: any): string {
   if (typeof value === 'number') {
@@ -60,42 +67,30 @@ export function Experiment({ data }: { data: any }) {
   let experimentName = data?.name.split('__')[0].toUpperCase();
   experimentName += ' — ' + data?.meta.params.dataset_percentage * 100;
   return (
-    <Card>
+    <Card className=" w-full">
       <CardHeader>
         <CardTitle>{experimentName}</CardTitle>
-        <CardDescription>
-          <h4 className="text-sm font-semibold">Parameters</h4>
-          <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(data.meta.params || {}).map(([key, value]) => (
-              <div key={key}>
-                <span className="font-semibold">{key}:</span> {String(value)}
-              </div>
-            ))}
-          </div>
-          {data.meta.scores && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Scores</h4>
-              <div className="grid gap-2 text-xs md:grid-cols-4">
-                {Object.entries(data.meta.scores).map(
-                  ([metricName, metricData]) => (
-                    <div key={metricName} className="space-y-1">
-                      <div className="font-semibold">
-                        {metricName.toUpperCase()}
-                      </div>
-                      {renderMetricData(
-                        metricData,
-                        metricName.toLowerCase() === 'align_score'
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-        </CardDescription>
+        <CardDescription></CardDescription>
       </CardHeader>
-      <CardContent>
-        <p>Card Content</p>
+      <CardContent className="flex flex-col gap-2 text-xs">
+        <div className="flex flex-wrap gap-2 text-xs">
+          {Object.entries(data.meta.params || {}).map(([key, value]) => (
+            <Badge key={key}>
+              {key}: {String(value)}
+            </Badge>
+          ))}
+        </div>
+        <div className="grid gap-2 text-xs md:grid-cols-4 margin-top-6">
+          {Object.entries(data.meta.scores).map(([metricName, metricData]) => (
+            <div key={metricName} className="space-y-1">
+              <div className="font-semibold">{metricName.toUpperCase()}</div>
+              {renderMetricData(
+                metricData,
+                metricName.toLowerCase() === 'align_score'
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

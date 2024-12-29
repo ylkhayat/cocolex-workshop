@@ -1,7 +1,7 @@
 export function SelectedRecord({ record }) {
   const cellStyle = {
-    maxHeight: '70rem',
-    overflow: 'auto'
+    overflow: 'auto',
+    maxHeight: '50vh'
   };
 
   return (
