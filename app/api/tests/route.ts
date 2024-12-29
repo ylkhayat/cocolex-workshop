@@ -1,11 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import experimentsData from 'public/experiments.json';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+
   const staticResponse = false;
+  const response = await fetch(`${url.origin}/api/experiments`);
+  const experimentsData = await response.json();
 
   if (staticResponse) {
     try {
@@ -23,7 +26,6 @@ export async function GET(request: Request) {
       });
     }
   }
-  const url = new URL(request.url);
   const datasetName = url.searchParams.get('dataset');
   const numAnnotations = parseInt(url.searchParams.get('number') || '0', 10);
   if (!datasetName || isNaN(numAnnotations)) {
@@ -124,6 +126,19 @@ export async function GET(request: Request) {
       )
     );
 
+    const datasetApiUrl = `${url.origin}/api/datasets?dataset=${encodeURIComponent(datasetName)}&split=test&docids=${filteredDocIds.join(',')}`;
+    const datasetResponse = await fetch(datasetApiUrl);
+    const extraDataForDocids = await datasetResponse.json();
+
+    if (extraDataForDocids.length !== numAnnotations) {
+      return new Response(
+        JSON.stringify({ error: 'Some docids were not found in the dataset' }),
+        {
+          status: 404
+        }
+      );
+    }
+
     let index = 0;
     for (const records of sortedFilteredRecords) {
       const docIds = records.map((record: any) => record.meta.docid);
@@ -145,6 +160,7 @@ export async function GET(request: Request) {
     }
 
     for (let i = 0; i < numAnnotations; i++) {
+      const extraData = extraDataForDocids[i];
       const ragRecord = results['rag'][i] as any;
       const adacadRecord = results['adacad'][i] as any;
       const knnlmContextEntropyRecord = results['knnlm-context-entropy'][
@@ -188,6 +204,8 @@ export async function GET(request: Request) {
         gold_text: ragRecord.meta.gold_text,
         previous_text: ragRecord.meta.previous_text,
         prompt: ragRecord.meta.prompt,
+        citations: extraData.citations,
+        top_k_passages: extraData.top_k_passages,
         generations: {
           rag: ragRecord.gen,
           adacad: adacadRecord.gen,

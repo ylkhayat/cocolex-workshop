@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 
-import experimentsData from 'public/experiments.json';
 import { ExperimentsList } from '@/components/experiments/experiments-list';
 import {
   Breadcrumb,
@@ -39,17 +38,17 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
+import { useExperiments } from '@/components/hooks/use-experiments';
 
 function findModelFromPath(data: any[], path: string): any | null {
-  const relevantPath = path.split('basement/')[1];
-  const [dataset, split, setup, topK, model] = relevantPath.split('/');
+  const [dataset, split, setup, topK, model] = path.split('/');
   const datasetData = data.find((d) => d.name === dataset);
   if (datasetData) {
     const splitData = datasetData.splits.find((s: any) => s.name === split);
     if (splitData) {
       const setupData = splitData.setups.find((s: any) => s.name === setup);
       if (setupData) {
-        const topKData = setupData.topKs.find((t: any) => t.name === topK);
+        const topKData = setupData.top_ks.find((t: any) => t.name === topK);
         if (topKData) {
           return topKData.models.find((m: any) => m.name === model);
         }
@@ -72,11 +71,13 @@ export default function Page() {
 }
 
 function ExperimentsPage() {
+  const experimentsData = useExperiments();
+
   const searchParams = useSearchParams();
   const modelPath = searchParams.get('model');
   const selectedModel = useMemo(
     () => (modelPath ? findModelFromPath(experimentsData, modelPath) : null),
-    [modelPath]
+    [modelPath, experimentsData]
   );
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);

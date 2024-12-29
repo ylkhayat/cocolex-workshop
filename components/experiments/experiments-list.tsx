@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import experimentsData from 'public/experiments.json';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -16,8 +15,10 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { useExperiments } from '@/hooks/use-experiments';
 
 export function ExperimentsList() {
+  const experimentsData = useExperiments();
   const router = useRouter();
 
   return (
@@ -72,7 +73,7 @@ export function ExperimentsList() {
                                   {shortSetup}
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  {setup.topKs?.map((topK, topKIndex) => (
+                                  {setup.top_ks?.map((topK, topKIndex) => (
                                     <Accordion
                                       key={topK.name}
                                       type="multiple"

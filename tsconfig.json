@@ -29,9 +29,6 @@
       "@/lib/*": [
         "lib/*"
       ],
-      "public/*": [
-        "./public/*"
-      ]
     },
     "plugins": [
       {
@@ -44,7 +41,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "public/experiments.json"
   ],
   "exclude": [
     "node_modules"

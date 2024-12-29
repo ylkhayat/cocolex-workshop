@@ -10,7 +10,6 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import experimentsData from 'public/experiments.json';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Accordion,
@@ -38,6 +37,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import { useExperiments } from '@/components/hooks/use-experiments';
 
 type FormValues = {
   id: number | null;
@@ -54,6 +54,8 @@ type FormValues = {
 };
 
 export default function AnnotatePage() {
+  const experimentsData = useExperiments();
+
   const {
     handleSubmit,
     control,
