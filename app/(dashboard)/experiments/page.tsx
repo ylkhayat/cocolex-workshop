@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { Modal } from '@/components/ui/modal';
-import experimentsData from '@/experiments.json';
+
+import experimentsData from '@/public/experiments.json';
 import { ExperimentsList } from '@/components/experiments/experiments-list';
 import {
   Breadcrumb,

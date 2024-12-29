@@ -9,7 +9,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import experimentsData from '@/experiments.json';
+import experimentsData from '@/public/experiments.json';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Accordion,

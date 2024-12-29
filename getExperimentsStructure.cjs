@@ -29,10 +29,11 @@ function getModels(dir) {
             );
             const metaFilePath = path.join(metaDir, metaFile);
 
-            const resultsFilePath = path.relative(
-              __dirname,
-              path.join(resultsDir, resultsBaseName + '.jsonl')
+            const resultsFilePath = path.join(
+              resultsDir,
+              resultsBaseName + '.jsonl'
             );
+            console.log(resultsFilePath);
 
             return {
               name: metaFile,
@@ -140,8 +141,11 @@ function parseDataDir(rootDir) {
   });
 }
 
-const dataDir = path.join(__dirname, 'basement');
+const dataDir = 'public/basement';
 const datasets = parseDataDir(dataDir);
 
-fs.writeFileSync('./experiments.json', JSON.stringify(datasets, null, 2));
+fs.writeFileSync(
+  './public/experiments.json',
+  JSON.stringify(datasets, null, 2)
+);
 console.log('Experiment structure saved to experiments.json');

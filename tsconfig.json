@@ -26,8 +26,8 @@
       "@/lib/*": [
         "lib/*"
       ],
-      "@/experiments.json": [
-        "experiments.json"
+      "@/public/*": [
+        "public/*"
       ]
     },
     "plugins": [

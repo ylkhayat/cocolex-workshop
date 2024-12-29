@@ -1,11 +1,11 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import experimentsData from '@/experiments.json';
+import experimentsData from '@/public/experiments.json';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const staticResponse = true;
+  const staticResponse = false;
 
   if (staticResponse) {
     try {
@@ -108,7 +108,6 @@ export async function GET(request: Request) {
       },
       allRecords[0].map((record: any) => record.meta.docid)
     );
-    console.log(commonDocIds.length);
     const filteredDocIds = commonDocIds
       .sort(() => 0.5 - Math.random())
       .slice(0, numAnnotations);
@@ -143,7 +142,6 @@ export async function GET(request: Request) {
       const experimentKey = (paths[index] as string)
         .split('generations/')[1]
         .split('__')[0] as keyof typeof results;
-      console.log('experimentKey', experimentKey);
       results[experimentKey].push(...(records as []));
       index++;
     }
