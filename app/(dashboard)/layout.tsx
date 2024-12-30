@@ -7,7 +7,9 @@ import {
   PanelLeft,
   Settings,
   ShoppingCart,
-  Users2
+  Users2,
+  LucideGitCompareArrows as Experiment,
+  LucideAccessibility as Annotation
 } from 'lucide-react';
 
 import {
@@ -43,16 +45,18 @@ export default function DashboardLayout({
         <DesktopNav />
         <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <MobileNav />
-            <DashboardBreadcrumb />
-            <SearchInput />
-            <User />
+            <div className="ml-auto flex items-center gap-2 px-3">
+              <MobileNav />
+              {/* <DashboardBreadcrumb /> */}
+              {/* <SearchInput /> */}
+              {/* <User /> */}
+            </div>
           </header>
           <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">
             {children}
           </main>
         </div>
-        <Analytics />
+        {/* <Analytics /> */}
       </main>
     </Providers>
   );
@@ -70,23 +74,11 @@ function DesktopNav() {
           <span className="sr-only">Acme Inc</span>
         </Link>
 
-        <NavItem href="#" label="Dashboard">
-          <Home className="h-5 w-5" />
+        <NavItem href="/experiments" label="Experiments">
+          <Experiment className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="#" label="Orders">
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="/" label="Products">
-          <Package className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="/customers" label="Customers">
-          <Users2 className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="#" label="Analytics">
+        <NavItem href="/annotating-tool" label="Annotating Tool">
           <LineChart className="h-5 w-5" />
         </NavItem>
       </nav>
@@ -160,6 +152,20 @@ function MobileNav() {
           >
             <LineChart className="h-5 w-5" />
             Settings
+          </Link>
+          <Link
+            href="/experiments"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <Experiment className="h-5 w-5" />
+            Experiments
+          </Link>
+          <Link
+            href="/annotating-tool"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <Annotation className="h-5 w-5" />
+            Annotating Tool
           </Link>
         </nav>
       </SheetContent>
