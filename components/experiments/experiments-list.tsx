@@ -39,7 +39,7 @@ export function ExperimentsList() {
             >
               <AccordionTrigger>{dataset.name.toUpperCase()}</AccordionTrigger>
               <AccordionContent>
-                {dataset.splits?.map((split, splitIndex) => (
+                {dataset.splits?.map((split: any, splitIndex: any) => (
                   <Accordion
                     key={split.name}
                     type="multiple"
@@ -52,10 +52,10 @@ export function ExperimentsList() {
                         {split.name.toUpperCase()}
                       </AccordionTrigger>
                       <AccordionContent>
-                        {split.setups?.map((setup, setupIndex) => {
+                        {split.setups?.map((setup: any, setupIndex: any) => {
                           const shortSetup = setup.name
                             .split('_')
-                            .map((s) => s[0])
+                            .map((s: any) => s[0])
                             .join('')
                             .toUpperCase();
                           return (
@@ -73,41 +73,43 @@ export function ExperimentsList() {
                                   {shortSetup}
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  {setup.top_ks?.map((topK, topKIndex) => (
-                                    <Accordion
-                                      key={topK.name}
-                                      type="multiple"
-                                      className={
-                                        topKIndex % 2 === 0
-                                          ? 'bg-gray-50'
-                                          : 'bg-gray-200'
-                                      }
-                                    >
-                                      <AccordionItem value={topK.name}>
-                                        <AccordionTrigger className="ml-12">
-                                          {topK.name.toUpperCase()}
-                                        </AccordionTrigger>
-                                        <AccordionContent className="space-y-2">
-                                          {topK.models?.map(
-                                            (model, modelIndex) => (
-                                              <Button
-                                                key={model.name}
-                                                variant="outline"
-                                                className={`ml-16 ${modelIndex % 2 === 0 ? 'bg-gray-100' : 'bg-white'}`}
-                                                onClick={() =>
-                                                  router.push(
-                                                    `?model=${encodeURIComponent(model.path)}`
-                                                  )
-                                                }
-                                              >
-                                                {model.name}
-                                              </Button>
-                                            )
-                                          )}
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </Accordion>
-                                  ))}
+                                  {setup.top_ks?.map(
+                                    (topK: any, topKIndex: any) => (
+                                      <Accordion
+                                        key={topK.name}
+                                        type="multiple"
+                                        className={
+                                          topKIndex % 2 === 0
+                                            ? 'bg-gray-50'
+                                            : 'bg-gray-200'
+                                        }
+                                      >
+                                        <AccordionItem value={topK.name}>
+                                          <AccordionTrigger className="ml-12">
+                                            {topK.name.toUpperCase()}
+                                          </AccordionTrigger>
+                                          <AccordionContent className="space-y-2">
+                                            {topK.models?.map(
+                                              (model: any, modelIndex: any) => (
+                                                <Button
+                                                  key={model.name}
+                                                  variant="outline"
+                                                  className={`ml-16 ${modelIndex % 2 === 0 ? 'bg-gray-100' : 'bg-white'}`}
+                                                  onClick={() =>
+                                                    router.push(
+                                                      `?model=${encodeURIComponent(model.path)}`
+                                                    )
+                                                  }
+                                                >
+                                                  {model.name}
+                                                </Button>
+                                              )
+                                            )}
+                                          </AccordionContent>
+                                        </AccordionItem>
+                                      </Accordion>
+                                    )
+                                  )}
                                 </AccordionContent>
                               </AccordionItem>
                             </Accordion>

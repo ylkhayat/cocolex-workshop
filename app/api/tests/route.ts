@@ -38,22 +38,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const dataset = experimentsData.find((d) => d.name === datasetName);
+    const dataset = experimentsData.find((d: any) => d.name === datasetName);
     if (!dataset) {
       return new Response(JSON.stringify({ error: 'Dataset not found' }), {
         status: 404
       });
     }
 
-    const split = dataset.splits.find((s) => s.name === 'test');
+    const split = dataset.splits.find((s: any) => s.name === 'test');
     const setup = split?.setups.find(
-      (s) => s.name === 'bm25_relevant_passages_oracle_documents'
+      (s: any) => s.name === 'bm25_relevant_passages_oracle_documents'
     );
     const topK =
       datasetName === 'cuad' || datasetName === 'obli_qa'
-        ? setup?.top_ks.find((t) => t.name === '10')
-        : setup?.top_ks.find((t) => t.name === '3');
-    const model = topK?.models.find((m) =>
+        ? setup?.top_ks.find((t: any) => t.name === '10')
+        : setup?.top_ks.find((t: any) => t.name === '3');
+    const model = topK?.models.find((m: any) =>
       m.name.includes('Mistral-7B-Instruct-v0.3')
     );
 
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       'knnlm-context-entropy',
       'knnlm-context-plus-entropy'
     ];
-    const experiments = model?.experiments.filter((exp) =>
+    const experiments = model?.experiments.filter((exp: any) =>
       experimentNames.some((name) => exp.name.startsWith(name))
     );
 

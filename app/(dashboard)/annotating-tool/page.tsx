@@ -38,6 +38,15 @@ import {
   TableRow
 } from '@/components/ui/table';
 import { useExperiments } from '@/components/hooks/use-experiments';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
 
 type FormValues = {
   id: number | null;
@@ -106,6 +115,8 @@ export default function AnnotatePage() {
     docid: string;
     gold_text: string;
     previous_text: string;
+    citations: string[][];
+    top_k_passages: string[];
     generations: Record<string, string>;
   } | null>(null);
 
@@ -275,7 +286,7 @@ export default function AnnotatePage() {
                 variant="outline"
                 onClick={(e) => {
                   e.preventDefault();
-                  setSelectedTest(test);
+                  setSelectedTest(test as any);
                 }}
                 className={
                   selectedTest?.docid === test.docid ? 'bg-gray-200' : ''
@@ -346,7 +357,8 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Fluency</h4>
                 <p className="text-xs">
-                  Rate the fluency of the generated text.
+                  Rate the fluency of the generated text (1: Least fluent, 5:
+                  Most fluent) based on grammatical correctness.
                 </p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.fluency`}
@@ -371,7 +383,8 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Correctness</h4>
                 <p className="text-xs">
-                  Rate the correctness of the generated text.
+                  Rate the correctness of the generated text; how aligned is the
+                  following text with respect to the given gold text.
                 </p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.correctness`}
@@ -396,7 +409,9 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Faithfulness</h4>
                 <p className="text-xs">
-                  Rate the faithfulness of the generated text.
+                  Rate the faithfulness of the generated text; how well does the
+                  generated text capture the information from the given passages
+                  and citations.
                 </p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
@@ -516,9 +531,66 @@ export default function AnnotatePage() {
                       {selectedTest?.previous_text || ''}
                     </p>
                   </div>
-                  <div>
-                    <h3 className="text-md font-semibold">Gold Text</h3>
+
+                  <div className="mb-20">
+                    <h3 className="text-md font-semibold mb-4">Gold Text</h3>
                     <p className="text-sm">{goldText}</p>
+                  </div>
+                  <div className="mb-4">
+                    <hr className="border-t border-gray-300" />
+                  </div>
+
+                  <div className="mb-4">
+                    <h3 className="text-md font-semibold mb-4">Passages</h3>
+                    <Tabs>
+                      <TabsList>
+                        {selectedTest?.top_k_passages
+                          .slice(0, 3)
+                          .map((passage, index) => (
+                            <TabsTrigger
+                              key={index}
+                              value={String.fromCharCode(65 + index)}
+                            >
+                              {passage.split('\n')[0]}
+                            </TabsTrigger>
+                          ))}
+                      </TabsList>
+                      {selectedTest?.top_k_passages.map((passage, index) => (
+                        <TabsContent
+                          key={index}
+                          value={String.fromCharCode(65 + index)}
+                        >
+                          <pre className="text-sm whitespace-pre-wrap">
+                            {passage.split('\n')[1]}
+                          </pre>
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </div>
+
+                  <div className="mb-4">
+                    <h3 className="text-md font-semibold">Citations</h3>
+                    <p className="text-sm mb-4">
+                      Select a citation to view more information.
+                    </p>
+
+                    {selectedTest?.citations.map((citation, index) => (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline">{citation[0]}</Button>
+                        </DialogTrigger>
+                        <DialogContent className="w-4/5 h-4/5">
+                          <DialogHeader>
+                            <DialogTitle>{citation[0]}</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="rounded-md border">
+                            <pre className="text-sm whitespace-pre-wrap">
+                              {citation[1]}
+                            </pre>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+                    ))}
                   </div>
                 </div>
 

@@ -22,8 +22,8 @@ export async function GET(request: Request) {
     const baseUrl = `https://datasets-server.huggingface.co/parquet?dataset=ylkhayat/${datasetName}-generation-workshop`;
     const listResponse = await axios.get(baseUrl);
     const files = listResponse.data.parquet_files
-      .filter((obj) => obj.split === splitPrefix && obj.config === 'BRPOD')
-      .map((obj) => obj.url);
+      .filter((obj: any) => obj.split === splitPrefix && obj.config === 'BRPOD')
+      .map((obj: any) => obj.url);
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       columns.push('top_k_passages');
     }
 
-    let cummulativeData = [];
+    let cummulativeData: any[] = [];
     for (const file of files) {
       await parquetRead({
         file: await asyncBufferFromUrl({ url: file }),
