@@ -82,6 +82,8 @@ export default function AnnotatePage() {
         docid: string;
         gold_text: string;
         previous_text: string;
+        citations: string[][];
+        top_k_passages: string[];
         generations: Record<string, string>;
       }[];
     }[]
@@ -165,13 +167,11 @@ export default function AnnotatePage() {
   }, [dataset, numberOfAnnotations, tests, reset]);
 
   const fetchSavedAnnotations = () => {
-    setLoading(true);
     fetch(`/api/annotations`)
       .then((response) => {
         return response.json();
       })
-      .then((data) => setSavedAnnotations(data))
-      .finally(() => setLoading(false));
+      .then((data) => setSavedAnnotations(data));
   };
   useEffect(() => {
     fetchSavedAnnotations();
@@ -255,11 +255,12 @@ export default function AnnotatePage() {
     </Card>
   );
 
+  console.log(tests);
   const testsList = (
     <div className="w-1/8 border-r p-4">
       <h3 className="text-md font-semibold">Tests</h3>
       <ul className="grid grid-cols-2 gap-2">
-        {tests.map((test, index) => {
+        {tests?.map((test, index) => {
           const evaluationKeys = ['fluency', 'correctness', 'faithfulness'];
           const evaluationsForTest = evaluations?.[test.docid] || {};
           const completedKeys = Object.keys(evaluationsForTest).filter((key) =>

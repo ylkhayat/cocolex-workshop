@@ -10,5 +10,14 @@ export default {
         hostname: '*.public.blob.vercel-storage.com'
       }
     ]
+  },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/experiments',
+        permanent: true
+      }
+    ];
   }
 };

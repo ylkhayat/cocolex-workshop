@@ -49,6 +49,17 @@ export async function GET(request: Request) {
         }
       });
     }
+
+    cummulativeData = cummulativeData.map((row) => {
+      let newDocid = row[0];
+      if (dataset === 'echr_qa') {
+        newDocid = row[0].toString();
+        if (newDocid.endsWith('n')) {
+          newDocid = newDocid.slice(0, -1);
+        }
+      }
+      return [newDocid, row[1], row[2]];
+    });
     const filteredData = cummulativeData.filter((row) =>
       docids.includes(row[0])
     );
@@ -66,6 +77,7 @@ export async function GET(request: Request) {
     }
     return NextResponse.json(finalData, { status: 200 });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

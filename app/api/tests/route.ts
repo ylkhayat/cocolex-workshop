@@ -51,8 +51,8 @@ export async function GET(request: Request) {
     );
     const topK =
       datasetName === 'cuad' || datasetName === 'obli_qa'
-        ? setup?.topKs.find((t) => t.name === '10')
-        : setup?.topKs.find((t) => t.name === '3');
+        ? setup?.top_ks.find((t) => t.name === '10')
+        : setup?.top_ks.find((t) => t.name === '3');
     const model = topK?.models.find((m) =>
       m.name.includes('Mistral-7B-Instruct-v0.3')
     );
@@ -100,6 +100,7 @@ export async function GET(request: Request) {
         `${url.origin}/api/experiment?path=${encodeURIComponent(path as any)}`
       );
       const records = await response.json();
+
       allRecords.push(records);
     }
     const commonDocIds = allRecords.reduce(
@@ -129,7 +130,6 @@ export async function GET(request: Request) {
     const datasetApiUrl = `${url.origin}/api/datasets?dataset=${encodeURIComponent(datasetName)}&split=test&docids=${filteredDocIds.join(',')}`;
     const datasetResponse = await fetch(datasetApiUrl);
     const extraDataForDocids = await datasetResponse.json();
-
     if (extraDataForDocids.length !== numAnnotations) {
       return new Response(
         JSON.stringify({ error: 'Some docids were not found in the dataset' }),
