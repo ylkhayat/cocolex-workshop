@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/table';
 import { useExperiments } from '@/components/hooks/use-experiments';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 import {
   Dialog,
@@ -48,8 +49,8 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog';
 
-type FormValues = {
-  id: number | null;
+type Annotation = {
+  id: number;
   dataset: string;
   numberOfAnnotations: number;
   username: string;
@@ -58,11 +59,33 @@ type FormValues = {
     docid: string;
     gold_text: string;
     previous_text: string;
+    citations: string[][];
+    top_k_passages: string[];
     generations: Record<string, string>;
   }[];
 };
 
+type Test = {
+  docid: string;
+  gold_text: string;
+  previous_text: string;
+  citations: string[][];
+  top_k_passages: string[];
+  generations: Record<string, string>;
+};
+
+type FormValues = {
+  id: number | null;
+  dataset: string;
+  numberOfAnnotations: number;
+  username: string;
+  evaluations: Record<string, Record<string, Record<string, number>>>;
+  tests: Test[];
+};
+
 export default function AnnotatePage() {
+  const { toast } = useToast();
+
   const experimentsData = useExperiments();
 
   const {
@@ -80,23 +103,7 @@ export default function AnnotatePage() {
       tests: []
     }
   });
-  const [savedAnnotations, setSavedAnnotations] = useState<
-    {
-      id: number;
-      dataset: string;
-      numberOfAnnotations: number;
-      username: string;
-      evaluations: Record<string, Record<string, Record<string, number>>>;
-      tests: {
-        docid: string;
-        gold_text: string;
-        previous_text: string;
-        citations: string[][];
-        top_k_passages: string[];
-        generations: Record<string, string>;
-      }[];
-    }[]
-  >([]);
+  const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [id, dataset, numberOfAnnotations, username, evaluations, tests] =
     useWatch({
@@ -111,14 +118,13 @@ export default function AnnotatePage() {
       ]
     });
 
-  const [selectedTest, setSelectedTest] = useState<{
-    docid: string;
-    gold_text: string;
-    previous_text: string;
-    citations: string[][];
-    top_k_passages: string[];
-    generations: Record<string, string>;
-  } | null>(null);
+  const [selected, setSelected] = useState<{
+    annotation: Annotation | null;
+    test: Test | null;
+  }>({
+    annotation: null,
+    test: null
+  });
 
   const onSubmit = async (data: FormValues) => {
     const isValid = tests.every((test) => {
@@ -132,15 +138,20 @@ export default function AnnotatePage() {
     });
 
     if (!isValid) {
-      alert('Please complete the evaluations for all tests.');
+      toast({
+        title: 'Error',
+        description: 'Please complete the evaluations for all tests.',
+        duration: 5000
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const url = data.id ? `/api/annotations/${data.id}` : '/api/annotations';
+      const url = data.id
+        ? `/api/annotations?id=${data.id}`
+        : '/api/annotations';
       const method = data.id ? 'PUT' : 'POST';
-
       await fetch(url, {
         method,
         headers: {
@@ -148,41 +159,78 @@ export default function AnnotatePage() {
         },
         body: JSON.stringify(data)
       });
-      reset();
-      alert('Annotation saved successfully!');
+      toast({
+        title: 'Success',
+        description: 'Annotation saved successfully!',
+        duration: 5000
+      });
     } catch (error) {
-      console.error('Error saving annotation:', error);
-      alert('Failed to save annotation.');
+      toast({
+        title: 'Error',
+        description: 'Failed to save annotation. Please try again.',
+        duration: 5000
+      });
     } finally {
       setLoading(false);
     }
     fetchSavedAnnotations();
   };
 
+  const fetchTests = async (d: any, n: any) => {
+    setLoading(true);
+    fetch(`/api/tests?dataset=${d}&number=${n}`)
+      .then((response) => response.json())
+      .then((data) => {
+        reset({
+          dataset,
+          numberOfAnnotations: n,
+          username,
+          evaluations: {},
+          tests: data
+        });
+      })
+      .finally(() => setLoading(false));
+  };
   useEffect(() => {
     if (dataset && numberOfAnnotations > 0 && tests.length === 0) {
-      setLoading(true);
-      fetch(`/api/tests?dataset=${dataset}&number=${numberOfAnnotations}`)
-        .then((response) => response.json())
-        .then((data) => {
-          reset({
-            dataset,
-            numberOfAnnotations,
-            username,
-            evaluations: {},
-            tests: data
-          });
-        })
-        .finally(() => setLoading(false));
+      fetchTests(dataset, numberOfAnnotations);
     }
-  }, [dataset, numberOfAnnotations, tests, reset]);
+  }, [dataset, numberOfAnnotations, tests, fetchTests]);
+
+  useEffect(() => {
+    if (selected?.annotation) {
+      reset(selected.annotation);
+    }
+  }, [selected?.annotation]);
 
   const fetchSavedAnnotations = () => {
     fetch(`/api/annotations`)
       .then((response) => {
         return response.json();
       })
-      .then((data) => setSavedAnnotations(data));
+      .then((data: Annotation[]) => {
+        setSavedAnnotations(data);
+        setSelected((prevSelected) => {
+          if (prevSelected.annotation) {
+            const previousAnnotation =
+              data.find(
+                (annotation) => annotation.id === prevSelected.annotation?.id
+              ) || null;
+            const previousTest =
+              previousAnnotation?.tests.find(
+                (test) => test.docid === prevSelected.test?.docid
+              ) || null;
+            return {
+              annotation: previousAnnotation,
+              test: previousTest
+            };
+          }
+          return {
+            annotation: null,
+            test: null
+          };
+        });
+      });
   };
   useEffect(() => {
     fetchSavedAnnotations();
@@ -244,13 +292,16 @@ export default function AnnotatePage() {
         <Controller
           name="numberOfAnnotations"
           control={control}
-          defaultValue={-1}
+          defaultValue={5}
           rules={{ required: 'Number of tests is required' }}
           render={({ field }) => (
             <ToggleGroup
               type="single"
               className="w-[180px]"
-              onValueChange={(value) => field.onChange(value)}
+              onValueChange={(value) => {
+                field.onChange(value);
+                fetchTests(dataset, value);
+              }}
               value={`${field.value}`}
             >
               {numberOfAnnotationsOptions.map((option) => (
@@ -271,26 +322,31 @@ export default function AnnotatePage() {
   const testsList = (
     <div className="w-1/8 border-r p-4">
       <h3 className="text-md font-semibold">Tests</h3>
-      <ul className="grid grid-cols-2 gap-2">
+      <ul className="grid gap-2">
         {tests?.map((test, index) => {
-          const evaluationKeys = ['fluency', 'correctness', 'faithfulness'];
+          const evaluationKeys = [
+            'fluency',
+            'coherence',
+            'correctness',
+            'faithfulness'
+          ];
           const evaluationsForTest = evaluations?.[test.docid] || {};
           const completedKeys = Object.keys(evaluationsForTest).filter((key) =>
             evaluationKeys.every(
               (evalKey) => evaluationsForTest[key]?.[evalKey]
             )
           ).length;
-          const completionPercentage = (completedKeys / 4) * 100;
+          const completionPercentage = ((completedKeys / 3) * 100).toFixed(2);
           return (
             <li key={index} className="mb-2">
               <Button
                 variant="outline"
                 onClick={(e) => {
                   e.preventDefault();
-                  setSelectedTest(test as any);
+                  setSelected({ annotation: selected.annotation, test });
                 }}
                 className={
-                  selectedTest?.docid === test.docid ? 'bg-gray-200' : ''
+                  selected.test?.docid === test.docid ? 'bg-gray-200' : ''
                 }
               >
                 Test {index + 1} ({completionPercentage}%)
@@ -304,70 +360,229 @@ export default function AnnotatePage() {
 
   const savedAnnotationsList = (
     <div className="w-full p-4">
-      <h3 className="text-md font-semibold">Saved Annotations</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Id</TableHead>
-            <TableHead>Annotator</TableHead>
-            <TableHead>Dataset</TableHead>
-            <TableHead>Number Of Annotations</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {savedAnnotations.map((annotation, index) => (
-            <TableRow key={index}>
-              <TableCell>{annotation.id}</TableCell>
-              <TableCell>{annotation.username}</TableCell>
-              <TableCell>{annotation.dataset}</TableCell>
-              <TableCell>{annotation.numberOfAnnotations}</TableCell>
-              <TableCell>
-                <Button
-                  variant="outline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    reset(annotation);
-                  }}
-                >
-                  View
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="dataset">
+          <AccordionTrigger>
+            Show Saved Annotations: {savedAnnotations.length}
+          </AccordionTrigger>
+          <AccordionContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Id</TableHead>
+                  <TableHead>Annotator</TableHead>
+                  <TableHead>Dataset</TableHead>
+                  <TableHead>Number Of Annotations</TableHead>
+                  <TableHead>Fluency</TableHead>
+                  <TableHead>Coherence</TableHead>
+                  <TableHead>Correctness</TableHead>
+                  <TableHead>Faithfulness</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {savedAnnotations.map((annotation, index) => {
+                  const evaluationAverages = Object.entries(
+                    annotation.evaluations
+                  ).reduce(
+                    (acc, [_, evals]) => {
+                      Object.entries(evals).forEach(([model, metrics]) => {
+                        if (!acc[model])
+                          acc[model] = {
+                            fluency: 0,
+                            coherence: 0,
+                            correctness: 0,
+                            faithfulness: 0,
+                            count: 0
+                          };
+                        acc[model].fluency +=
+                          parseInt(metrics.fluency as any, 10) || 0;
+                        acc[model].coherence +=
+                          parseInt(metrics.coherence as any, 10) || 0;
+                        acc[model].correctness +=
+                          parseInt(metrics.correctness as any, 10) || 0;
+                        acc[model].faithfulness +=
+                          parseInt(metrics.faithfulness as any, 10) || 0;
+                        acc[model].count += 1;
+                      });
+                      return acc;
+                    },
+                    {} as Record<
+                      string,
+                      {
+                        fluency: number;
+                        coherence: number;
+                        correctness: number;
+                        faithfulness: number;
+                        count: number;
+                      }
+                    >
+                  );
+
+                  const evaluationSummary = Object.entries(
+                    evaluationAverages
+                  ).reduce(
+                    (acc, [model, metrics]) => {
+                      const avgFluency = (
+                        metrics.fluency / metrics.count
+                      ).toFixed(2);
+                      const avgCoherence = (
+                        metrics.coherence / metrics.count
+                      ).toFixed(2);
+                      const avgCorrectness = (
+                        metrics.correctness / metrics.count
+                      ).toFixed(2);
+                      const avgFaithfulness = (
+                        metrics.faithfulness / metrics.count
+                      ).toFixed(2);
+                      const newModelName = model.toUpperCase();
+                      acc.fluency.push(`${newModelName}: ${avgFluency}`);
+                      acc.coherence.push(`${newModelName}: ${avgCoherence}`);
+                      acc.correctness.push(
+                        `${newModelName}: ${avgCorrectness}`
+                      );
+                      acc.faithfulness.push(
+                        `${newModelName}: ${avgFaithfulness}`
+                      );
+                      return acc;
+                    },
+                    {
+                      fluency: [] as string[],
+                      coherence: [] as string[],
+                      correctness: [] as string[],
+                      faithfulness: [] as string[]
+                    }
+                  );
+
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>{annotation.id}</TableCell>
+                      <TableCell>{annotation.username}</TableCell>
+                      <TableCell>{annotation.dataset}</TableCell>
+                      <TableCell>{annotation.numberOfAnnotations}</TableCell>
+                      <TableCell>
+                        <Table>
+                          <TableBody>
+                            {evaluationSummary.fluency
+                              .sort((a, b) => {
+                                const aValue = parseFloat(a.split(': ')[1]);
+                                const bValue = parseFloat(b.split(': ')[1]);
+                                return bValue - aValue;
+                              })
+                              .map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{item}</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+                      <TableCell>
+                        <Table>
+                          <TableBody>
+                            {evaluationSummary.coherence
+                              .sort((a, b) => {
+                                const aValue = parseFloat(a.split(': ')[1]);
+                                const bValue = parseFloat(b.split(': ')[1]);
+                                return bValue - aValue;
+                              })
+                              .map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{item}</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+                      <TableCell>
+                        <Table>
+                          <TableBody>
+                            {evaluationSummary.correctness
+                              .sort((a, b) => {
+                                const aValue = parseFloat(a.split(': ')[1]);
+                                const bValue = parseFloat(b.split(': ')[1]);
+                                return bValue - aValue;
+                              })
+                              .map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{item}</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+                      <TableCell>
+                        <Table>
+                          <TableBody>
+                            {evaluationSummary.faithfulness
+                              .sort((a, b) => {
+                                const aValue = parseFloat(a.split(': ')[1]);
+                                const bValue = parseFloat(b.split(': ')[1]);
+                                return bValue - aValue;
+                              })
+                              .map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{item}</TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelected({
+                              annotation,
+                              test: annotation.tests[0]
+                            });
+                          }}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 
-  const goldText = selectedTest?.gold_text || '';
-  const generatedText = selectedTest?.generations && (
+  const goldText = selected.test?.gold_text || '';
+  const generatedText = selected.test?.generations && (
     <div className="w-1/2 border-l p-4">
       <h3 className="text-md font-semibold">Generated Text</h3>
-      <Tabs defaultValue="A">
+      <Tabs defaultValue="A" key={selected.test.docid}>
         <TabsList>
           <TabsTrigger value="A">A</TabsTrigger>
           <TabsTrigger value="B">B</TabsTrigger>
           <TabsTrigger value="C">C</TabsTrigger>
-          <TabsTrigger value="D">D</TabsTrigger>
+          {/* <TabsTrigger value="D">D</TabsTrigger> */}
         </TabsList>
-        {Object.entries(selectedTest?.generations).map(
+        {Object.entries(selected.test?.generations).map(
           ([key, record], index) => (
             <TabsContent key={key} value={String.fromCharCode(65 + index)}>
               <p className="text-sm">{record}</p>
               <div className="mt-4">
                 <h4 className="font-semibold">Fluency</h4>
                 <p className="text-xs">
-                  Rate the fluency of the generated text based on grammatical
-                  correctness.
+                  Evaluate the quality of sentences individually for grammatical
+                  correctness, proper word usage, and readability.
                 </p>
                 <p className="text-xs">(1: Least fluent, 5: Most fluent)</p>
                 <Controller
-                  key={`evaluations.${selectedTest?.docid}.${key}.fluency`}
-                  name={`evaluations.${selectedTest?.docid}.${key}.fluency`}
+                  key={`evaluations.${selected.test?.docid}.${key}.fluency`}
+                  name={`evaluations.${selected.test?.docid}.${key}.fluency`}
                   control={control}
                   render={({ field }) => (
                     <ToggleGroup
+                      variant="outline"
                       onValueChange={(value) => field.onChange(value)}
                       value={`${field.value}`}
                       type="single"
@@ -385,17 +600,18 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Coherence</h4>
                 <p className="text-xs">
-                  Rate the coherence of the generated text; how well does the
-                  generated text flow and connect the information from the given
-                  passages.
+                  Examine how well the sentences work together to form a logical
+                  and connected narrative. Assess if the text flows smoothly and
+                  maintains clarity throughout.
                 </p>
                 <p className="text-xs">(1: Least coherent, 5: Most coherent)</p>
                 <Controller
-                  key={`evaluations.${selectedTest?.docid}.${key}.coherence`}
-                  name={`evaluations.${selectedTest?.docid}.${key}.coherence`}
+                  key={`evaluations.${selected.test?.docid}.${key}.coherence`}
+                  name={`evaluations.${selected.test?.docid}.${key}.coherence`}
                   control={control}
                   render={({ field }) => (
                     <ToggleGroup
+                      variant="outline"
                       onValueChange={(value) => field.onChange(value)}
                       value={`${field.value}`}
                       type="single"
@@ -413,16 +629,17 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Correctness</h4>
                 <p className="text-xs">
-                  Rate the correctness of the generated text; how aligned is the
-                  following text with respect to the given gold text.
+                  Examine how accurately the generated text aligns with the
+                  given golden answer.
                 </p>
                 <p className="text-xs">(1: Least correct, 5: Most correct)</p>
                 <Controller
-                  key={`evaluations.${selectedTest?.docid}.${key}.correctness`}
-                  name={`evaluations.${selectedTest?.docid}.${key}.correctness`}
+                  key={`evaluations.${selected.test?.docid}.${key}.correctness`}
+                  name={`evaluations.${selected.test?.docid}.${key}.correctness`}
                   control={control}
                   render={({ field }) => (
                     <ToggleGroup
+                      variant="outline"
                       onValueChange={(value) => field.onChange(value)}
                       value={`${field.value}`}
                       type="single"
@@ -440,17 +657,17 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Faithfulness</h4>
                 <p className="text-xs">
-                  Rate the faithfulness of the generated text; how well does the
-                  generated text capture the information from the given passages
-                  and citations.
+                  Evaluate how well the generated text reflects and aligns with
+                  the information provided in the given passages.
                 </p>
                 <p className="text-xs">(1: Least faithful, 5: Most faithful)</p>
                 <Controller
-                  key={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
-                  name={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
+                  key={`evaluations.${selected.test?.docid}.${key}.faithfulness`}
+                  name={`evaluations.${selected.test?.docid}.${key}.faithfulness`}
                   control={control}
                   render={({ field }) => (
                     <ToggleGroup
+                      variant="outline"
                       onValueChange={(value) => field.onChange(value)}
                       value={`${field.value}`}
                       type="single"
@@ -511,7 +728,7 @@ export default function AnnotatePage() {
       {annotatorUsername}
       <Card className="mt-4 mb-4">
         <CardHeader>
-          <CardTitle>Previously Saved Annotations</CardTitle>
+          <CardTitle>Saved Annotations</CardTitle>
         </CardHeader>
         <CardContent>{savedAnnotationsList}</CardContent>
       </Card>
@@ -555,7 +772,7 @@ export default function AnnotatePage() {
                   <div className="mb-4">
                     <h3 className="text-md font-semibold">Previous Text</h3>
                     <p className="text-sm">
-                      {selectedTest?.previous_text || ''}
+                      {selected.test?.previous_text || ''}
                     </p>
                   </div>
 
@@ -574,7 +791,7 @@ export default function AnnotatePage() {
                     </p>
                     <Tabs>
                       <TabsList>
-                        {selectedTest?.top_k_passages
+                        {selected.test?.top_k_passages
                           .slice(0, 3)
                           .map((passage, index) => (
                             <TabsTrigger
@@ -585,7 +802,7 @@ export default function AnnotatePage() {
                             </TabsTrigger>
                           ))}
                       </TabsList>
-                      {selectedTest?.top_k_passages.map((passage, index) => (
+                      {selected.test?.top_k_passages.map((passage, index) => (
                         <TabsContent
                           key={index}
                           value={String.fromCharCode(65 + index)}
@@ -604,8 +821,8 @@ export default function AnnotatePage() {
                       Select a citation to view more information.
                     </p>
 
-                    {selectedTest?.citations.map((citation, index) => (
-                      <Dialog>
+                    {selected.test?.citations.map((citation, index) => (
+                      <Dialog key={citation[0]}>
                         <DialogTrigger asChild>
                           <Button variant="outline">{citation[0]}</Button>
                         </DialogTrigger>

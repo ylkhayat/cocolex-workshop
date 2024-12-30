@@ -32,12 +32,14 @@ export async function PUT(req: NextRequest) {
 
   if (typeof id === 'string') {
     try {
-      await updateAnnotation(id, annotationData);
+      const { id: _, createdAt: __, ...rest } = annotationData;
+      await updateAnnotation(id, rest);
       return NextResponse.json(
         { message: 'Annotation updated successfully' },
         { status: 200 }
       );
     } catch (error) {
+      console.error('Error updating annotation:', error);
       return NextResponse.json(
         { error: (error as any).message },
         { status: 500 }
