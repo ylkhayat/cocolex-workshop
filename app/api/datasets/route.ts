@@ -50,26 +50,22 @@ export async function GET(request: Request) {
       });
     }
 
-    cummulativeData = cummulativeData.map((row) => {
-      let newDocid = row[0];
-      if (dataset === 'echr_qa') {
-        newDocid = row[0].toString();
-        if (newDocid.endsWith('n')) {
-          newDocid = newDocid.slice(0, -1);
-        }
-      }
-      return [newDocid, row[1], row[2]];
-    });
     const filteredData = cummulativeData.filter((row) =>
       docids.includes(row[0])
     );
-    const finalData = filteredData.map((row) => ({
-      docid: row[0],
-      citations: row[1],
-      top_k_passages: row[2]
-    }));
+    const finalData = filteredData.reduce(
+      (acc, row) => ({
+        ...acc,
+        [row[0]]: {
+          citations: row[1],
+          top_k_passages: row[2]
+        }
+      }),
+      {}
+    );
 
-    if (finalData.length !== docids.length) {
+    const finalDataKeys = Object.keys(finalData);
+    if (finalDataKeys.length !== docids.length) {
       return NextResponse.json(
         { error: 'Some docids were not found in the dataset.' },
         { status: 404 }

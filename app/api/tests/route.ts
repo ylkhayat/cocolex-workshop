@@ -134,7 +134,8 @@ export async function GET(request: Request) {
     const datasetApiUrl = `${url.origin}/api/datasets?dataset=${encodeURIComponent(datasetName)}&split=test&docids=${filteredDocIds.join(',')}`;
     const datasetResponse = await fetch(datasetApiUrl);
     const extraDataForDocids = await datasetResponse.json();
-    if (extraDataForDocids.length !== numAnnotations) {
+    const numExtraData = Object.keys(extraDataForDocids);
+    if (numExtraData.length !== numAnnotations) {
       return new Response(
         JSON.stringify({ error: 'Some docids were not found in the dataset' }),
         {
@@ -164,8 +165,8 @@ export async function GET(request: Request) {
     }
 
     for (let i = 0; i < numAnnotations; i++) {
-      const extraData = extraDataForDocids[i];
       const ragRecord = results['rag'][i] as any;
+      const extraData = extraDataForDocids[ragRecord.meta.docid];
       const adacadRecord = results['adacad'][i] as any;
       const knnlmContextEntropyRecord = results['knnlm-context-entropy'][
         i

@@ -383,6 +383,34 @@ export default function AnnotatePage() {
                 />
               </div>
               <div className="mt-4">
+                <h4 className="font-semibold">Coherence</h4>
+                <p className="text-xs">
+                  Rate the coherence of the generated text; how well does the
+                  generated text flow and connect the information from the given
+                  passages.
+                </p>
+                <p className="text-xs">(1: Least coherent, 5: Most coherent)</p>
+                <Controller
+                  key={`evaluations.${selectedTest?.docid}.${key}.coherence`}
+                  name={`evaluations.${selectedTest?.docid}.${key}.coherence`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+              </div>
+              <div className="mt-4">
                 <h4 className="font-semibold">Correctness</h4>
                 <p className="text-xs">
                   Rate the correctness of the generated text; how aligned is the
