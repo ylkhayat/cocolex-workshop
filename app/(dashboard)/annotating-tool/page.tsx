@@ -358,9 +358,10 @@ export default function AnnotatePage() {
               <div className="mt-4">
                 <h4 className="font-semibold">Fluency</h4>
                 <p className="text-xs">
-                  Rate the fluency of the generated text (1: Least fluent, 5:
-                  Most fluent) based on grammatical correctness.
+                  Rate the fluency of the generated text based on grammatical
+                  correctness.
                 </p>
+                <p className="text-xs">(1: Least fluent, 5: Most fluent)</p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.fluency`}
                   name={`evaluations.${selectedTest?.docid}.${key}.fluency`}
@@ -387,6 +388,7 @@ export default function AnnotatePage() {
                   Rate the correctness of the generated text; how aligned is the
                   following text with respect to the given gold text.
                 </p>
+                <p className="text-xs">(1: Least correct, 5: Most correct)</p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.correctness`}
                   name={`evaluations.${selectedTest?.docid}.${key}.correctness`}
@@ -414,6 +416,7 @@ export default function AnnotatePage() {
                   generated text capture the information from the given passages
                   and citations.
                 </p>
+                <p className="text-xs">(1: Least faithful, 5: Most faithful)</p>
                 <Controller
                   key={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
                   name={`evaluations.${selectedTest?.docid}.${key}.faithfulness`}
