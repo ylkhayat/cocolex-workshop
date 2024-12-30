@@ -19,7 +19,9 @@ export async function GET(request: Request) {
   }
   const combinedString = `${datasetName}-${numAnnotations}.json`;
   const staticResponse =
-    combinedString === 'echr_qa-25.json' || combinedString === 'echr_qa-5.json';
+    combinedString === 'echr_qa-25.json' ||
+    combinedString === 'echr_qa-5.json' ||
+    combinedString === 'echr_qa-1.json';
 
   if (staticResponse) {
     try {

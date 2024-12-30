@@ -25,6 +25,7 @@ export const annotations = pgTable('annotations', {
   numberOfAnnotations: integer('number_of_annotations').notNull(),
   username: text('username').notNull(),
   evaluations: jsonb('evaluations').notNull(),
+  mapping: jsonb('mapping').notNull(),
   tests: jsonb('tests').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull()
 });
