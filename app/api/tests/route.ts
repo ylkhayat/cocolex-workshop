@@ -1,18 +1,32 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
-  const staticResponse = false;
   const response = await fetch(`${url.origin}/api/experiments`);
   const experimentsData = await response.json();
+  const datasetName = url.searchParams.get('dataset');
+  const numAnnotations = parseInt(url.searchParams.get('number') || '0', 10);
+  if (!datasetName || isNaN(numAnnotations)) {
+    return new Response(
+      JSON.stringify({ error: 'Dataset and number are required' }),
+      {
+        status: 400
+      }
+    );
+  }
+  const combinedString = `${datasetName}-${numAnnotations}.json`;
+  const staticResponse =
+    combinedString === 'echr_qa-25.json' || combinedString === 'echr_qa-5.json';
 
   if (staticResponse) {
     try {
-      const fullPath = path.join(process.cwd(), 'static-response.json');
+      const fullPath = path.join(
+        process.cwd(),
+        `./app/api/tests/static-responses/${combinedString}`
+      );
       const fileContent = await fs.readFile(fullPath, 'utf8');
       const records = JSON.parse(fileContent);
 
@@ -25,16 +39,6 @@ export async function GET(request: Request) {
         status: 500
       });
     }
-  }
-  const datasetName = url.searchParams.get('dataset');
-  const numAnnotations = parseInt(url.searchParams.get('number') || '0', 10);
-  if (!datasetName || isNaN(numAnnotations)) {
-    return new Response(
-      JSON.stringify({ error: 'Dataset and number are required' }),
-      {
-        status: 400
-      }
-    );
   }
 
   try {

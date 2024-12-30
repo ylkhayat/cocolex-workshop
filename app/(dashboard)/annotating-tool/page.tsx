@@ -226,6 +226,8 @@ export default function AnnotatePage() {
   );
 
   const numberOfAnnotationsOptions = [
+    { label: '5', value: '5' },
+    { label: '10', value: '10' },
     { label: '25', value: '25' },
     { label: '40', value: '40' },
     { label: '50', value: '50' }
@@ -266,7 +268,6 @@ export default function AnnotatePage() {
     </Card>
   );
 
-  console.log(tests);
   const testsList = (
     <div className="w-1/8 border-r p-4">
       <h3 className="text-md font-semibold">Tests</h3>
@@ -476,12 +477,7 @@ export default function AnnotatePage() {
           </AccordionItem>
         )}
       </Accordion>
-      <Accordion type="single" collapsible>
-        <AccordionItem value="username">
-          <AccordionTrigger>Username: {username}</AccordionTrigger>
-          <AccordionContent>{annotatorUsername}</AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      {annotatorUsername}
       <Card className="mt-4 mb-4">
         <CardHeader>
           <CardTitle>Previously Saved Annotations</CardTitle>
@@ -541,7 +537,10 @@ export default function AnnotatePage() {
                   </div>
 
                   <div className="mb-4">
-                    <h3 className="text-md font-semibold mb-4">Passages</h3>
+                    <h3 className="text-md font-semibold">Passages</h3>
+                    <p className="text-sm mb-4">
+                      Select a passage to view more information.
+                    </p>
                     <Tabs>
                       <TabsList>
                         {selectedTest?.top_k_passages
