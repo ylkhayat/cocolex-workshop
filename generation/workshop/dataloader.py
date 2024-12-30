@@ -6,7 +6,6 @@ from .dataloader_extras import (
     dataset_to_prompt_suffix
     )
 from datasets import load_dataset
-import sys
 import os
 
 num_proc = os.cpu_count()
@@ -50,7 +49,7 @@ class TextSection:
 
 
 class ModelInputPreprocessor:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, silent: bool = False):
         self.dataset_to_system_prompt = dataset_to_system_prompt
         # must pass joined_retrieved_ids
         self.dataset_to_context_prefix = dataset_to_context_prefix
@@ -73,8 +72,7 @@ class ModelInputPreprocessor:
         workshop_hf_name = "ylkhayat/{dataset_name}-generation-workshop"
         if self.dataset == "clerc":
             if 'noisy' in self.setup:
-                print("[!] noisy data not supported for CLERC.")
-                sys.exit(0)
+                raise ValueError("[!] noisy data not supported for CLERC.")
             dataset_repo_name_prefix = "CLERC"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
@@ -84,22 +82,19 @@ class ModelInputPreprocessor:
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "cuad":
             if 'oracle_passages' in self.setup:
-                print("[!] oracle passages data not supported for CUAD.")
-                sys.exit(0)
+                raise ValueError("[!] oracle passages data not supported for CUAD.")
             dataset_repo_name_prefix = "CUAD"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "obli_qa":
             if 'oracle_passages' in self.setup:
-                print("[!] oracle passages data not supported for ObliQA.")
-                sys.exit(0)
+                raise ValueError("[!] oracle passages data not supported for ObliQA.")
             dataset_repo_name_prefix = "OBLI_QA"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
         elif self.dataset == "oal_qa":
             if 'oracle_passages' in self.setup:
-                print("[!] oracle passages data not supported for ObliQA.")
-                sys.exit(0)
+                raise ValueError("[!] oracle passages data not supported for OAL QA.")
             dataset_repo_name_prefix = "OAL_QA"
             workshop_hf_name = workshop_hf_name.format(dataset_name=dataset_repo_name_prefix)
             self.current_dataset = load_dataset(workshop_hf_name, data_dir=self.setup, split=self.split)
@@ -110,9 +105,9 @@ class ModelInputPreprocessor:
             self.current_dataset = load_dataset("parquet", data_files={self.split: f"{url}{self.split}*.parquet"})[self.split]
         assert self.current_dataset is not None, f"Dataset '{self.dataset}' not supported."
         length_of_dataset = int(len(self.current_dataset) * self.dataset_percentage)
-
-        print(f"[!] dataset: '{workshop_hf_name}'")
-        print(f"[!] experiment num of records: {length_of_dataset}")
+        if not silent:
+            print(f"[!] dataset: '{workshop_hf_name}'")
+            print(f"[!] experiment num of records: {length_of_dataset}")
 
         self.processed_dataset = self.current_dataset.select(range(length_of_dataset))
 

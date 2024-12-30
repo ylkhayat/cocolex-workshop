@@ -146,7 +146,7 @@ try:
                     current_results.append(new_object)
                     all_results.append(new_object)
                     record_counter += 1
-                if record_counter % 10 == 0:
+                if record_counter % 5 == 0:
                     all_results = write_results(all_results, results_output_path, reference_dataset=original_dataset)
             all_results = write_results(all_results, results_output_path, reference_dataset=original_dataset)
             knnlm_model.model.to(torch.device('cpu'))

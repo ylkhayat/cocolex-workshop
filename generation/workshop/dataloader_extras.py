@@ -13,7 +13,6 @@ dataset_to_system_prompt = {
     ),
     "oal_qa": (
         "You are an Australian legal expert providing answers to legal questions based on referenced cases and judgments. "
-        "Your responses must cite the exact text from the provided context and align with Australian legal citation standards. "
         "Avoid making assumptions or interpretations beyond the provided information."
     )
 }
@@ -37,8 +36,7 @@ dataset_to_context_prefix = {
     ),
     "oal_qa": (
         "The following Australian legal cases and documents were retrieved to assist in answering the question. "
-        "You must reference these documents in your answer. (e.g., [{joined_retrieved_ids}]). "
-        "Use exact excerpts from these documents wherever possible."
+        "You must reference these documents in your answer using their ids (e.g., {joined_retrieved_ids})."
     )
 }
 
@@ -67,9 +65,6 @@ dataset_to_prompt_prefix = {
     ),
     "oal_qa": (
         "Answer the following question using the referenced Australian legal cases and documents. "
-        "Use the exact language from the context wherever applicable. "
-        "Ensure citations follow Australian legal standards. "
-        "If the context does not contain relevant information, state 'No relevant information found in the document.' "
         "Question: "
     )
 }
@@ -92,8 +87,7 @@ dataset_to_prompt_suffix = {
     ),
     "oal_qa": (
         "\n"
-        "Answer the question using the exact text from the retrieved Australian legal documents. "
-        "Ensure all responses are properly cited. "
+        "Answer the question using the provided Australian legal cases and documents. "
         "\n"
         "Answer: "
     )

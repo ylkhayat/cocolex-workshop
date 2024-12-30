@@ -1,11 +1,11 @@
 #!/bin/bash
 
-threshold=${1:-40}
+threshold=${1:-30}
 
 nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader,nounits | while IFS=, read -r index used total; do
     current_hour=$(date +%H)
     # if [ "$current_hour" -ge 8 ] && [ "$current_hour" -lt 23 ]; then
-        # if [ "$index" -eq 0 ] || [ "$index" -eq 1 ]; then
+    # if [ "$index" -eq 2 ] || [ "$index" -eq 3 ]; then
     if [ "$index" -eq 3 ]; then
         continue
     fi

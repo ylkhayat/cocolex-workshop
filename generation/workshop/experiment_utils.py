@@ -9,7 +9,6 @@ from transformers import pipeline
 import argparse
 import copy
 import gspread
-import ipdb
 import json
 import numpy as np
 import os
@@ -17,6 +16,7 @@ import random
 import sys
 import torch
 import transformers
+import shlex
 
 def set_seed(random_seed):
     torch.manual_seed(random_seed)
@@ -57,7 +57,6 @@ def assign_args_modifications(args):
         args.max_new_tokens = 300
         
     if 'plus' in args.variant:
-        # if 'cuad' in args.dataset or 'obli_qa' in args.dataset:
         if 'obli_qa' in args.dataset:
             args.use_faiss = True
         else:
@@ -72,7 +71,7 @@ def assign_args_modifications(args):
     args.override = args.override == 1
     return args
 
-def build_args_parser(method):
+def build_args_parser(method, current_args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--check_only',type=int, default=0, help='Only check if the experiment needs to run.')
     parser.add_argument("--batch_size", type=int, default=1)
@@ -98,7 +97,16 @@ def build_args_parser(method):
     parser.add_argument("--use_faiss", type=int, default=0)
     parser.add_argument("--use_instructions", type=int, default=0)
     parser.add_argument("--variant", type=str, choices=['normal', 'context', 'context_adacad', 'plus', 'context_plus', 'context_adacad_plus'], default="normal")
-    return assign_args_modifications(parser.parse_args())
+    if current_args is not None:
+        args = parser.parse_args(current_args)
+    else:
+        args = parser.parse_args()
+    return assign_args_modifications(args)
+
+
+def parse_args_string(method, input_string):
+    current_args = shlex.split(input_string)
+    return build_args_parser(method, current_args)
 
 
 def load_results(args):
@@ -113,22 +121,25 @@ def load_results(args):
     return None
 
 
-def load_experiment(args):
+def load_experiment(args, silent=False):
     minimum_accepted_generation_length = int(args.max_new_tokens * 0.1)
     new_args = copy.deepcopy(args)
     exists = False
     results = []
     results_output_path, meta_output_path, legacy_results_output_path = build_path(new_args)
-    print(f"[!] loading experiment from {results_output_path}")
+    if not silent:
+        print(f"[!] loading experiment from {results_output_path}")
     has_results = os.path.exists(results_output_path)
     has_legacy_results = os.path.exists(legacy_results_output_path)
-    print(f"[!] found meta: {meta_output_path}")
+    if not silent:
+        print(f"[!] found meta: {meta_output_path}")
     has_meta = os.path.exists(meta_output_path)
     duplicates = 0
     invalid = 0
     existing_docids = set()
     if has_legacy_results:
-        print("[!] found legacy results, accumulating...")
+        if not silent:
+            print("[!] found legacy results, accumulating...")
         with open(legacy_results_output_path, "r") as f:
             for line in f:
                 record = json.loads(line)
@@ -146,19 +157,22 @@ def load_experiment(args):
         duplicates = 0
         with open(results_output_path, "r") as f:
             for line in f:
-                record = json.loads(line)
-                record_gen = record['gen']
-                if len(record_gen) < minimum_accepted_generation_length:
+                try:
+                    record = json.loads(line)
+                    record_gen = record['gen']
+                    if len(record_gen) < minimum_accepted_generation_length:
+                        invalid += 1
+                        continue
+                    if record['meta']['docid'] not in existing_docids:
+                        results.append(record)
+                        existing_docids.add(record['meta']['docid'])
+                    else:
+                        duplicates += 1
+                except Exception:
                     invalid += 1
-                    continue
-                if record['meta']['docid'] not in existing_docids:
-                    results.append(record)
-                    existing_docids.add(record['meta']['docid'])
-                else:
-                    duplicates += 1
-                
-    print(f"[!] found {len(results)} results, and pruned {duplicates} duplicates, and {invalid} invalid records")
-    print(f"[!] writing new results to {results_output_path}")
+    if not silent:
+        print(f"[!] found {len(results)} results, and pruned {duplicates} duplicates, and {invalid} invalid records")
+        print(f"[!] writing new results to {results_output_path}")
     write_results(results, results_output_path)
     return exists, has_meta, results
 
@@ -244,7 +258,6 @@ def build_path(args):
         new_results_output_path = f"{common_output_path}/generations/{method}__{new_results_params_str}.jsonl"
         if detect_old_results_path(old_results_output_path, new_results_output_path):
             print(f"[!] copying {old_results_output_path} to: {new_results_output_path}")
-            ipdb.set_trace()
             with open(old_results_output_path, "r") as f:
                 with open(new_results_output_path, "w") as g:
                     for line in tqdm(f, desc="Copying results"):
