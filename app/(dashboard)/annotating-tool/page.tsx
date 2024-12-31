@@ -112,7 +112,7 @@ export default function AnnotatePage() {
     defaultValues: {
       id: null,
       dataset: 'echr_qa',
-      numberOfAnnotations: 5,
+      numberOfAnnotations: 25,
       username: 'lawyer',
       password: '',
       evaluations: {},
@@ -377,10 +377,10 @@ export default function AnnotatePage() {
                 <TableHead>Annotator</TableHead>
                 <TableHead>Dataset</TableHead>
                 <TableHead>Number Of Annotations</TableHead>
-                <TableHead>Fluency</TableHead>
-                <TableHead>Coherence</TableHead>
-                <TableHead>Correctness</TableHead>
-                <TableHead>Faithfulness</TableHead>
+                <TableHead>Avg. Fluency</TableHead>
+                <TableHead>Avg. Coherence</TableHead>
+                <TableHead>Avg. Correctness</TableHead>
+                <TableHead>Avg. Faithfulness</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -463,21 +463,17 @@ export default function AnnotatePage() {
                     <TableCell>{annotation.dataset}</TableCell>
                     <TableCell>{annotation.numberOfAnnotations}</TableCell>
                     <TableCell>
-                      <Table>
-                        <TableBody>
-                          {evaluationSummary.fluency
-                            .sort((a, b) => {
-                              const aValue = parseFloat(a.split(': ')[1]);
-                              const bValue = parseFloat(b.split(': ')[1]);
-                              return bValue - aValue;
-                            })
-                            .map((item, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{item}</TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
+                      {evaluationSummary.fluency
+                        .sort((a, b) => {
+                          const aValue = parseFloat(a.split(': ')[1]);
+                          const bValue = parseFloat(b.split(': ')[1]);
+                          return bValue - aValue;
+                        })
+                        .map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item}</TableCell>
+                          </TableRow>
+                        ))}
                     </TableCell>
                     <TableCell>
                       <Table>
@@ -497,38 +493,30 @@ export default function AnnotatePage() {
                       </Table>
                     </TableCell>
                     <TableCell>
-                      <Table>
-                        <TableBody>
-                          {evaluationSummary.correctness
-                            .sort((a, b) => {
-                              const aValue = parseFloat(a.split(': ')[1]);
-                              const bValue = parseFloat(b.split(': ')[1]);
-                              return bValue - aValue;
-                            })
-                            .map((item, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{item}</TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
+                      {evaluationSummary.correctness
+                        .sort((a, b) => {
+                          const aValue = parseFloat(a.split(': ')[1]);
+                          const bValue = parseFloat(b.split(': ')[1]);
+                          return bValue - aValue;
+                        })
+                        .map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item}</TableCell>
+                          </TableRow>
+                        ))}
                     </TableCell>
                     <TableCell>
-                      <Table>
-                        <TableBody>
-                          {evaluationSummary.faithfulness
-                            .sort((a, b) => {
-                              const aValue = parseFloat(a.split(': ')[1]);
-                              const bValue = parseFloat(b.split(': ')[1]);
-                              return bValue - aValue;
-                            })
-                            .map((item, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{item}</TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
+                      {evaluationSummary.faithfulness
+                        .sort((a, b) => {
+                          const aValue = parseFloat(a.split(': ')[1]);
+                          const bValue = parseFloat(b.split(': ')[1]);
+                          return bValue - aValue;
+                        })
+                        .map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item}</TableCell>
+                          </TableRow>
+                        ))}
                     </TableCell>
 
                     <TableCell>
@@ -556,141 +544,145 @@ export default function AnnotatePage() {
   );
 
   const goldText = selected.test?.gold_text || '';
-  const generatedText = selected.test?.generations && (
-    <div className="w-1/2 border-l p-4">
-      <h3 className="text-md font-semibold">Generated Text</h3>
-      <Tabs defaultValue="A" key={selected.test.docid}>
-        <TabsList>
-          <TabsTrigger value="A">A</TabsTrigger>
-          <TabsTrigger value="B">B</TabsTrigger>
-          <TabsTrigger value="C">C</TabsTrigger>
-        </TabsList>
-        {Object.entries(mapping[selected.test?.docid]).map(([model, key]) => (
-          <TabsContent key={key} value={key}>
-            {password === SECRET_WORDS && (
-              <p className="mb-4">
-                {key} {'->'} {model}
-              </p>
-            )}
-            <p className="text-sm">{selected.test?.generations[model]}</p>
-            <div className="mt-4">
-              <h4 className="font-semibold">Fluency</h4>
-              <p className="text-xs">
-                Evaluate the quality of sentences individually for grammatical
-                correctness, proper word usage, and readability.
-              </p>
-              <p className="text-xs">(1: Least fluent, 5: Most fluent)</p>
-              <Controller
-                key={`evaluations.${selected.test?.docid}.${model}.fluency`}
-                name={`evaluations.${selected.test?.docid}.${model}.fluency`}
-                control={control}
-                render={({ field }) => (
-                  <ToggleGroup
-                    variant="outline"
-                    onValueChange={(value) => field.onChange(value)}
-                    value={`${field.value}`}
-                    type="single"
-                    className="w-full"
-                  >
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <ToggleGroupItem key={value} value={value.toString()}>
-                        {value}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                )}
-              />
-            </div>
-            <div className="mt-4">
-              <h4 className="font-semibold">Coherence</h4>
-              <p className="text-xs">
-                Examine how well the sentences work together to form a logical
-                and connected narrative. Assess if the text flows smoothly and
-                maintains clarity throughout.
-              </p>
-              <p className="text-xs">(1: Least coherent, 5: Most coherent)</p>
-              <Controller
-                key={`evaluations.${selected.test?.docid}.${model}.coherence`}
-                name={`evaluations.${selected.test?.docid}.${model}.coherence`}
-                control={control}
-                render={({ field }) => (
-                  <ToggleGroup
-                    variant="outline"
-                    onValueChange={(value) => field.onChange(value)}
-                    value={`${field.value}`}
-                    type="single"
-                    className="w-full"
-                  >
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <ToggleGroupItem key={value} value={value.toString()}>
-                        {value}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                )}
-              />
-            </div>
-            <div className="mt-4">
-              <h4 className="font-semibold">Correctness</h4>
-              <p className="text-xs">
-                Examine how accurately the generated text aligns with the given
-                golden answer.
-              </p>
-              <p className="text-xs">(1: Least correct, 5: Most correct)</p>
-              <Controller
-                key={`evaluations.${selected.test?.docid}.${model}.correctness`}
-                name={`evaluations.${selected.test?.docid}.${model}.correctness`}
-                control={control}
-                render={({ field }) => (
-                  <ToggleGroup
-                    variant="outline"
-                    onValueChange={(value) => field.onChange(value)}
-                    value={`${field.value}`}
-                    type="single"
-                    className="w-full"
-                  >
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <ToggleGroupItem key={value} value={value.toString()}>
-                        {value}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                )}
-              />
-            </div>
-            <div className="mt-4">
-              <h4 className="font-semibold">Faithfulness</h4>
-              <p className="text-xs">
-                Evaluate how well the generated text reflects and aligns with
-                the information provided in the given passages.
-              </p>
-              <p className="text-xs">(1: Least faithful, 5: Most faithful)</p>
-              <Controller
-                key={`evaluations.${selected.test?.docid}.${model}.faithfulness`}
-                name={`evaluations.${selected.test?.docid}.${model}.faithfulness`}
-                control={control}
-                render={({ field }) => (
-                  <ToggleGroup
-                    variant="outline"
-                    onValueChange={(value) => field.onChange(value)}
-                    value={`${field.value}`}
-                    type="single"
-                    className="w-full"
-                  >
-                    {[1, 2, 3, 4, 5].map((value) => (
-                      <ToggleGroupItem key={value} value={value.toString()}>
-                        {value}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                )}
-              />
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
-  );
+  const generatedText = mapping &&
+    Object.keys(mapping).length > 0 &&
+    selected.test?.docid &&
+    mapping[selected.test?.docid] &&
+    selected.test?.generations && (
+      <div className="w-1/2 border-l p-4">
+        <h3 className="text-md font-semibold">Generated Text</h3>
+        <Tabs defaultValue="A" key={selected.test.docid}>
+          <TabsList>
+            <TabsTrigger value="A">A</TabsTrigger>
+            <TabsTrigger value="B">B</TabsTrigger>
+            <TabsTrigger value="C">C</TabsTrigger>
+          </TabsList>
+          {Object.entries(mapping[selected.test?.docid]).map(([model, key]) => (
+            <TabsContent key={key} value={key}>
+              {password === SECRET_WORDS && (
+                <p className="mb-4">
+                  Letter: '{key}' maps to '{model}'
+                </p>
+              )}
+              <p className="text-sm">{selected.test?.generations[model]}</p>
+              <div className="mt-4">
+                <h4 className="font-semibold">Fluency</h4>
+                <p className="text-xs">
+                  Evaluate the quality of sentences individually for grammatical
+                  correctness, proper word usage, and readability.
+                </p>
+                <p className="text-xs">(1: Least fluent, 5: Most fluent)</p>
+                <Controller
+                  key={`evaluations.${selected.test?.docid}.${model}.fluency`}
+                  name={`evaluations.${selected.test?.docid}.${model}.fluency`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      variant="outline"
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold">Coherence</h4>
+                <p className="text-xs">
+                  Examine how well the sentences work together to form a logical
+                  and connected narrative. Assess if the text flows smoothly and
+                  maintains clarity throughout.
+                </p>
+                <p className="text-xs">(1: Least coherent, 5: Most coherent)</p>
+                <Controller
+                  key={`evaluations.${selected.test?.docid}.${model}.coherence`}
+                  name={`evaluations.${selected.test?.docid}.${model}.coherence`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      variant="outline"
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold">Correctness</h4>
+                <p className="text-xs">
+                  Examine how accurately the generated text aligns with the
+                  given golden answer.
+                </p>
+                <p className="text-xs">(1: Least correct, 5: Most correct)</p>
+                <Controller
+                  key={`evaluations.${selected.test?.docid}.${model}.correctness`}
+                  name={`evaluations.${selected.test?.docid}.${model}.correctness`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      variant="outline"
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold">Faithfulness</h4>
+                <p className="text-xs">
+                  Evaluate how well the generated text reflects and aligns with
+                  the information provided in the given passages.
+                </p>
+                <p className="text-xs">(1: Least faithful, 5: Most faithful)</p>
+                <Controller
+                  key={`evaluations.${selected.test?.docid}.${model}.faithfulness`}
+                  name={`evaluations.${selected.test?.docid}.${model}.faithfulness`}
+                  control={control}
+                  render={({ field }) => (
+                    <ToggleGroup
+                      variant="outline"
+                      onValueChange={(value) => field.onChange(value)}
+                      value={`${field.value}`}
+                      type="single"
+                      className="w-full"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <ToggleGroupItem key={value} value={value.toString()}>
+                          {value}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+    );
   const annotatorUsername = (
     <Card>
       <CardHeader>
@@ -759,7 +751,7 @@ export default function AnnotatePage() {
             <CardContent>{savedAnnotationsList}</CardContent>
           </Card>
         )}
-        <Card className="flex flex-col flex-grow overflow-hidden min-h-[50vh]">
+        <Card className="flex flex-col flex-grow overflow-hidden min-h-[50vh] max-h-[70vh]">
           <CardHeader>
             <CardTitle>Annotations</CardTitle>
             {id && (
