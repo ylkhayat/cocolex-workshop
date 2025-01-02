@@ -132,7 +132,10 @@ function ExperimentsPage() {
                   </div>
                 ))
               ) : (
-                <p>No experiments found.</p>
+                <p>
+                  Select a setup form the sidebar to start previewing
+                  generations.
+                </p>
               )}
             </CardContent>
           </Card>
