@@ -92,7 +92,7 @@ class KNNLM:
                 nneighbors = faiss.IndexFlatL2(keys.shape[-1])
                 faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
-                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus() - 2)
+                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
                     # res = faiss.StandardGpuResources()
                     # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)
@@ -131,7 +131,7 @@ class KNNLM:
                 nneighbors = faiss.IndexFlatL2(keys.shape[-1])
                 faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
-                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus() - 2)
+                    nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
                     # res = faiss.StandardGpuResources()
                     # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)

@@ -19,12 +19,12 @@ time_between_experiments=28
 models=(
     # meta-llama/Llama-3.1-8B-Instruct
     mistralai/Mistral-7B-Instruct-v0.3
-    Equall/Saul-7B-Instruct-v1 
+    # Equall/Saul-7B-Instruct-v1 
     )
 setups=(
     bm25_relevant_passages_oracle_documents 
-    bm25_oracle_passages_oracle_documents 
-    bm25_noisy_oracle_passages_oracle_documents
+    # bm25_oracle_passages_oracle_documents 
+    # bm25_noisy_oracle_passages_oracle_documents
     # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
     # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
     )
@@ -39,11 +39,11 @@ knnlm_variants=(
     context_adacad_plus
     )
 datasets=(
-    cuad
-    obli_qa
     clerc
-    echr_qa
+    # cuad
+    # echr_qa
     # oal_qa
+    # obli_qa
     )
 # dataset_percentage=0.01
 # dataset_percentage=0.1
@@ -128,7 +128,7 @@ should_run=0
 echo -e "${BOLD} [!]\t running mode '$run_mode'"
 echo -e "${BOLD} [!]\t variant mode '$variant_mode'"
 
-override=1
+override=0
 if [ ! -f "all_runs.json" ] || [ "$override" -eq 1 ]; then
     all_runs=()
     all_window_names=()
@@ -241,8 +241,8 @@ echo "[!] runs to go: ${#filtered_runs_array[@]}"
 
 for filtered_run in "${filtered_runs_array[@]}"; do
     IFS='|' read -r info_name window_name run_command <<< "$filtered_run"
+    gpu=$(wait_for_gpu)
     if ! tmux list-windows -t "$session_name" | grep -q "$window_name"; then
-        gpu=$(wait_for_gpu)
         log_new_experiment "$run_command" "$info_name"
         tmux new-window -t "$session_name" -n "$window_name" \
                 "$run_command --device $gpu; tmux kill-window -t \"\${session_name}:$window_name\";"
