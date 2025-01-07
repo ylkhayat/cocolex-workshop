@@ -54,7 +54,6 @@ class KNNLM:
                                    max_length: int = 512,
                                    overlap: float = 0.5) -> List[Tuple[torch.Tensor, int]]:
         processed_chunks = []
-        # for context in tqdm(references, desc="Preparing references"):
         for context in references:
             assert len(context) == 2, "Each reference must be a tuple of (id, text)"
             context_text = context[1]
@@ -93,8 +92,6 @@ class KNNLM:
                 faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
                     nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
-                    # res = faiss.StandardGpuResources()
-                    # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)
             else:
                 keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
@@ -107,10 +104,7 @@ class KNNLM:
             })
         return batch_datastores
     
-    
-
-    # more safe to use
-    def construct_datastore_individually(self,
+    def construct_datastore(self,
                                     context_texts: List[str],
                                     layer_index=-1,
                                     k=10):
@@ -132,8 +126,6 @@ class KNNLM:
                 faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
                     nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
-                    # res = faiss.StandardGpuResources()
-                    # nneighbors = faiss.index_cpu_to_gpu(res, self.device.index, nneighbors)
                 nneighbors.add(keys)
             else:
                 keys = hidden_states[0].detach().cpu().numpy()
@@ -284,9 +276,9 @@ class KNNLM:
                                                              layer_index=datastore_from_layer_index,
                                                              k=k)
         else:
-            batch_datastores = self.construct_datastore_individually(references,
-                                                                     layer_index=datastore_from_layer_index,
-                                                                     k=k)
+            batch_datastores = self.construct_datastore(references,
+                                                        layer_index=datastore_from_layer_index,
+                                                        k=k)
         if generate_time_report:
             monitor.stop_record("build_datastores")
 

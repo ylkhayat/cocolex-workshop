@@ -21,6 +21,7 @@ thesis_service_account.json
 data
 
 *.txt
+!generation/workshop/results/*.txt
 generation/dataset-preparation/obli_qa/obliqa_documents.json
 *.json
 

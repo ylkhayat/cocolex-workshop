@@ -1,0 +1,495 @@
+╒══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╤══════════════╕
+│ File                                                                                                                                             │   Line count │
+╞══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╪══════════════╡
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy   │            0 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy        │            0 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-constant           │            0 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                     │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy              │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                          │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                   │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy            │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                        │           10 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                     │           20 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-constant                │           40 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                        │           90 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                 │          100 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy  │          111 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy       │          111 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                           │          150 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                   │          420 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                             │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                      │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                                    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                                    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-entropy                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/rag                                            │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/cad                                            │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-plus-entropy                     │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-constant                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/adacad                                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-constant                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                   │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-constant             │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                            │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                            │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy      │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy             │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                   │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy            │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                        │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy                │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/6/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                      │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                      │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant              │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                              │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                                │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-entropy                        │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/rag                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/cad                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-plus-entropy                   │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-constant                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/adacad                                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-constant                │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                 │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-constant           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                       │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                          │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy                │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy    │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy         │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                  │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy           │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ clerc/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                               │         1000 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                            │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                            │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                     │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy              │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                   │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/rag                                    │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-plus-entropy             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-constant                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/cad                                    │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/adacad                                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-entropy                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                    │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                    │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy      │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy           │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                            │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy     │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                            │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_noisy_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                               │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                               │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                           │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                    │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/rag                                          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-plus-entropy                   │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-constant                       │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/cad                                          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/adacad                                       │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-entropy                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                       │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                       │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                   │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy            │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy           │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant               │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                               │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_oracle_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                  │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                              │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                       │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/rag                                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-plus-entropy                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-constant                     │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/cad                                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/adacad                                     │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/archive/generations/knnlm-context-entropy                      │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                        │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                 │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                     │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                      │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy          │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy               │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy         │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                             │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ echr_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy              │         1116 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy         │         1308 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy │         1308 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                │         1538 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy        │         1538 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                              │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                   │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/rag                                                 │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/adacad                                              │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-plus-entropy                          │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/cad                                                 │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                               │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                        │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                      │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy           │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                         │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                      │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-plus-entropy                  │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                         │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                       │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ oal_qa/test/bm25_relevant_passages_oracle_documents/3/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                │         2024 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/rag                                               │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/cad                                               │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/adacad                                            │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                      │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                            │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                             │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                       │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                       │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                    │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy              │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                    │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                     │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant            │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                               │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy             │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy      │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                               │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ obli_qa/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                            │         2786 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-plus-entropy                    │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-constant                               │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/cad                                                  │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-adacad-entropy                         │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/rag                                                  │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/adacad                                               │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/Equall_Saul-7B-Instruct-v1/generations/knnlm-context-entropy                                │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-plus-entropy            │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-constant                       │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/cad                                          │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-adacad-entropy                 │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/rag                                          │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/adacad                                       │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/generations/knnlm-context-entropy                        │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/adacad                               │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-constant               │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/cad                                  │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-entropy         │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/rag                                  │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-entropy                │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-adacad-plus-entropy    │         4182 │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼──────────────┤
+│ cuad/test/bm25_relevant_passages_oracle_documents/10/mistralai_Mistral-7B-Instruct-v0.3/archive/generations/knnlm-context-plus-entropy           │         4182 │
+╘══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╧══════════════╛
