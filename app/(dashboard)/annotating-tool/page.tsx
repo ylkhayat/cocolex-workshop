@@ -722,6 +722,40 @@ export default function AnnotatePage() {
     </Card>
   );
 
+  const isSubmitAllowed = tests.every((test) => {
+    const currentEvaluations = evaluations[test.docid];
+    return (
+      currentEvaluations &&
+      Object.values(currentEvaluations).length === 3 &&
+      Object.values(currentEvaluations).every((evals) => {
+        return (
+          evals.fluency &&
+          evals.correctness &&
+          evals.faithfulness &&
+          evals.coherence
+        );
+      })
+    );
+  });
+
+  const missingEvaluations = tests
+    .map((test, index) => {
+      const currentEvaluations = evaluations[test.docid];
+      const missingModels = Object.entries(mapping[test.docid] || {})
+        .filter(([model, key]) => {
+          const evals = currentEvaluations?.[model];
+          return (
+            !evals ||
+            !evals.fluency ||
+            !evals.correctness ||
+            !evals.faithfulness ||
+            !evals.coherence
+          );
+        })
+        .map(([model, key]) => key);
+      return { index, missingModels };
+    })
+    .filter(({ missingModels }) => missingModels.length > 0);
   return (
     <div className="h-[95vh] flex flex-col">
       <div className="grid gap-2 ">
@@ -751,6 +785,37 @@ export default function AnnotatePage() {
             <CardContent>{savedAnnotationsList}</CardContent>
           </Card>
         )}
+        <div className="flex flex-wrap gap-4">
+          {missingEvaluations.length > 0 && (
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Missing Evaluations</CardTitle>
+                <CardDescription>
+                  Complete the evaluations for the following tests.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  {missingEvaluations.map(({ index, missingModels }) => (
+                    <div key={index} className="flex flex-col items-start">
+                      <p className="font-semibold">Test {index + 1}</p>
+                      <div className="flex gap-2">
+                        {missingModels.sort().map((model) => (
+                          <span
+                            key={model}
+                            className="bg-red-200 text-red-800 px-2 py-1 rounded"
+                          >
+                            {model}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
         <Card className="flex flex-col flex-grow overflow-hidden min-h-[50vh] max-h-[70vh]">
           <CardHeader>
             <CardTitle>Annotations</CardTitle>
@@ -914,7 +979,12 @@ export default function AnnotatePage() {
             )}
           </CardContent>
           <CardFooter>
-            <Button onClick={handleSubmit(onSubmit)}>Submit Annotation</Button>
+            <Button
+              onClick={handleSubmit(onSubmit)}
+              disabled={!isSubmitAllowed}
+            >
+              Submit Annotation
+            </Button>
           </CardFooter>
         </Card>
       </div>
