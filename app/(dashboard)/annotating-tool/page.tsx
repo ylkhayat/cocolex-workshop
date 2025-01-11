@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import {
+  useForm,
+  Controller,
+  useWatch,
+  useFormContext,
+  FormProvider
+} from 'react-hook-form';
 import {
   Card,
   CardContent,
@@ -53,6 +59,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
+import { openDB } from 'idb';
 
 type Annotation = {
   id: number;
@@ -98,30 +105,17 @@ type FormValues = {
 };
 
 const SECRET_WORDS = 'awetos-tellingly-wakf';
-export default function AnnotatePage() {
-  const { toast } = useToast();
+const DB_NAME = 'annotationDB';
+const STORE_NAME = 'formData';
 
-  const experimentsData = useExperiments();
-
+const AnnotatePageInner = () => {
   const {
     handleSubmit,
     control,
     reset,
     formState: { errors }
-  } = useForm<FormValues>({
-    defaultValues: {
-      id: null,
-      dataset: 'echr_qa',
-      numberOfAnnotations: 25,
-      username: 'lawyer',
-      password: '',
-      evaluations: {},
-      mapping: {},
-      tests: []
-    }
-  });
-  const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
-  const [loading, setLoading] = useState(false);
+  } = useFormContext<FormValues>();
+
   const [
     id,
     dataset,
@@ -144,7 +138,11 @@ export default function AnnotatePage() {
       'tests'
     ]
   });
+  const { toast } = useToast();
 
+  const experimentsData = useExperiments();
+  const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<{
     annotation: Annotation | null;
     test: Test | null;
@@ -249,6 +247,51 @@ export default function AnnotatePage() {
   useEffect(() => {
     fetchSavedAnnotations();
   }, []);
+
+  useEffect(() => {
+    const saveFormData = async () => {
+      const db = await openDB(DB_NAME, 1, {
+        upgrade(db) {
+          db.createObjectStore(STORE_NAME);
+        }
+      });
+      const formData = {
+        id,
+        dataset,
+        numberOfAnnotations,
+        username,
+        password,
+        mapping,
+        evaluations,
+        tests
+      };
+      await db.put(STORE_NAME, formData, 'formData');
+    };
+
+    saveFormData();
+  }, [
+    id,
+    dataset,
+    numberOfAnnotations,
+    username,
+    password,
+    mapping,
+    evaluations,
+    tests,
+    toast
+  ]);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      const db = await openDB(DB_NAME, 1);
+      const formData = await db.get(STORE_NAME, 'formData');
+      if (formData) {
+        reset(formData);
+      }
+    };
+
+    loadFormData();
+  }, [reset]);
 
   const fetchSavedAnnotations = () => {
     fetch(`/api/annotations`)
@@ -926,10 +969,10 @@ export default function AnnotatePage() {
                         <CardContent className="flex gap-4">
                           {selected.test?.top_k_passages
                             .slice(0, 3)
-                            .map((passage) => {
+                            .map((passage, index) => {
                               const [title, content] = passage.split('\n');
                               return (
-                                <Popover>
+                                <Popover key={index}>
                                   <PopoverTrigger>
                                     <Button variant="outline">{title}</Button>
                                   </PopoverTrigger>
@@ -989,5 +1032,51 @@ export default function AnnotatePage() {
         </Card>
       </div>
     </div>
+  );
+};
+
+export default function AnnotatePage() {
+  const { toast } = useToast();
+  const getIndexedDBState = async () => {
+    const db = await openDB(DB_NAME, 1);
+    const formData = await db.get(STORE_NAME, 'formData');
+    if (formData) {
+      toast({
+        title: 'Synced',
+        description: 'Continuing where we left off!.'
+      });
+    }
+    return (
+      formData ?? {
+        id: null,
+        dataset: 'echr_qa',
+        numberOfAnnotations: 25,
+        username: 'lawyer',
+        password: '',
+        evaluations: {},
+        mapping: {},
+        tests: []
+      }
+    );
+  };
+  const formMethods = useForm<FormValues>({
+    async defaultValues() {
+      return getIndexedDBState();
+    }
+  });
+
+  const [dataset] = useWatch({
+    control: formMethods.control,
+    name: ['dataset']
+  });
+
+  if (!dataset) {
+    return null;
+  }
+
+  return (
+    <FormProvider {...formMethods}>
+      <AnnotatePageInner />
+    </FormProvider>
   );
 }

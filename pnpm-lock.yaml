@@ -99,9 +99,15 @@ importers:
       hyparquet:
         specifier: ^1.8.0
         version: 1.8.0
+      idb:
+        specifier: ^8.0.1
+        version: 8.0.1
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.0.0-rc-cd22717c-20241013)
+      lz-string:
+        specifier: ^1.5.0
+        version: 1.5.0
       next:
         specifier: 15.0.0-rc.1
         version: 15.0.0-rc.1(react-dom@19.0.0-rc-cd22717c-20241013(react@19.0.0-rc-cd22717c-20241013))(react@19.0.0-rc-cd22717c-20241013)
@@ -1705,6 +1711,9 @@ packages:
   hyparquet@1.8.0:
     resolution: {integrity: sha512-RnaZ4WxU1WTdJ3X0OsaTXpbBapTxX4WAAdj0EPVr150IxzKWzzDjQd+zOLa2u722YDrfm/F2N+sSyvdYX5SIpg==}
 
+  idb@8.0.1:
+    resolution: {integrity: sha512-EkBCzUZSdhJV8PxMSbeEV//xguVKZu9hZZulM+2gHXI0t2hGVU3eYE6/XnH77DS6FM2FY8wl17aDcu9vXpvLWQ==}
+
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
 
@@ -1773,6 +1782,10 @@ packages:
     resolution: {integrity: sha512-rpp7pFHh3Xd93KHixNgB0SqThMHpYNzsGUu69UaQbSZ75Q/J3m5t6EhKyMT3m4w2WOxmJ2mY0tD3vebnXqQryQ==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lz-string@1.5.0:
+    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
+    hasBin: true
 
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -3647,6 +3660,8 @@ snapshots:
 
   hyparquet@1.8.0: {}
 
+  idb@8.0.1: {}
+
   invariant@2.2.4:
     dependencies:
       loose-envify: 1.4.0
@@ -3701,6 +3716,8 @@ snapshots:
   lucide-react@0.400.0(react@19.0.0-rc-cd22717c-20241013):
     dependencies:
       react: 19.0.0-rc-cd22717c-20241013
+
+  lz-string@1.5.0: {}
 
   merge2@1.4.1: {}
 
