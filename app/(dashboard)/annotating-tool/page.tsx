@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import {
   useForm,
   Controller,
@@ -59,11 +59,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { DBConfig, STORE_NAME } from './db-config';
 
-import { initDB, useIndexedDB } from 'react-indexed-db-hook';
-
-initDB(DBConfig);
+import { useIDBContext, IDBProvider } from '@/components/hooks/use-idb';
 
 type Annotation = {
   id: number;
@@ -141,7 +138,8 @@ const AnnotatePageInner = () => {
     ]
   });
   const { toast } = useToast();
-  const { update, deleteRecord } = useIndexedDB(STORE_NAME);
+  const { deleteCurrentAnnotation, updateCurrentAnnotation } = useIDBContext();
+
   const experimentsData = useExperiments();
   const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -265,7 +263,7 @@ const AnnotatePageInner = () => {
         tests
       };
 
-      await update(formData);
+      await updateCurrentAnnotation(formData);
     };
 
     saveFormData();
@@ -864,7 +862,7 @@ const AnnotatePageInner = () => {
                   ) {
                     return;
                   }
-                  await deleteRecord(0);
+                  await deleteCurrentAnnotation();
                   reset({
                     id: 0,
                     dataset: 'echr_qa',
@@ -1030,17 +1028,12 @@ const AnnotatePageInner = () => {
   );
 };
 
-export default function AnnotatePage() {
+function AnnotatePage() {
+  const { getCurrentAnnotation } = useIDBContext();
   const { toast } = useToast();
-  const { getAll } = useIndexedDB(STORE_NAME);
   const getIndexedDBState = async () => {
-    toast({
-      title: 'Created',
-      description: 'New annotation form created.'
-    });
-    const formDataItems = await getAll();
-    if (formDataItems.length > 0) {
-      const formData = formDataItems[0];
+    const formData = await getCurrentAnnotation();
+    if (formData) {
       toast({
         title: 'Synced',
         description: 'Continuing where we left off!.'
@@ -1077,5 +1070,13 @@ export default function AnnotatePage() {
     <FormProvider {...formMethods}>
       <AnnotatePageInner />
     </FormProvider>
+  );
+}
+
+export default function AnnotationPageWrapper() {
+  return (
+    <IDBProvider>
+      <AnnotatePage />
+    </IDBProvider>
   );
 }
