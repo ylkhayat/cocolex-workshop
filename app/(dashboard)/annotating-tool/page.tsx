@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   useForm,
   Controller,
@@ -59,7 +59,11 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { openDB } from 'idb';
+import { DBConfig, STORE_NAME } from './db-config';
+
+import { initDB, useIndexedDB } from 'react-indexed-db-hook';
+
+initDB(DBConfig);
 
 type Annotation = {
   id: number;
@@ -105,8 +109,6 @@ type FormValues = {
 };
 
 const SECRET_WORDS = 'awetos-tellingly-wakf';
-const DB_NAME = 'annotationDB';
-const STORE_NAME = 'formData';
 
 const AnnotatePageInner = () => {
   const {
@@ -139,7 +141,7 @@ const AnnotatePageInner = () => {
     ]
   });
   const { toast } = useToast();
-
+  const { update } = useIndexedDB(STORE_NAME);
   const experimentsData = useExperiments();
   const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,9 +175,10 @@ const AnnotatePageInner = () => {
 
     setLoading(true);
     try {
-      const url = data.id
-        ? `/api/annotations?id=${data.id}`
-        : '/api/annotations';
+      const url =
+        data.id !== 0 && data.id
+          ? `/api/annotations?id=${data.id}`
+          : '/api/annotations';
       const method = data.id ? 'PUT' : 'POST';
       await fetch(url, {
         method,
@@ -221,6 +224,7 @@ const AnnotatePageInner = () => {
           };
         }, {});
         reset({
+          id,
           dataset,
           numberOfAnnotations: n,
           username,
@@ -250,11 +254,6 @@ const AnnotatePageInner = () => {
 
   useEffect(() => {
     const saveFormData = async () => {
-      const db = await openDB(DB_NAME, 1, {
-        upgrade(db) {
-          db.createObjectStore(STORE_NAME);
-        }
-      });
       const formData = {
         id,
         dataset,
@@ -265,7 +264,8 @@ const AnnotatePageInner = () => {
         evaluations,
         tests
       };
-      await db.put(STORE_NAME, formData, 'formData');
+
+      await update(formData);
     };
 
     saveFormData();
@@ -277,21 +277,8 @@ const AnnotatePageInner = () => {
     password,
     mapping,
     evaluations,
-    tests,
-    toast
+    tests
   ]);
-
-  useEffect(() => {
-    const loadFormData = async () => {
-      const db = await openDB(DB_NAME, 1);
-      const formData = await db.get(STORE_NAME, 'formData');
-      if (formData) {
-        reset(formData);
-      }
-    };
-
-    loadFormData();
-  }, [reset]);
 
   const fetchSavedAnnotations = () => {
     fetch(`/api/annotations`)
@@ -362,10 +349,10 @@ const AnnotatePageInner = () => {
 
   const numberOfAnnotationsOptions = [
     { label: '5', value: '5' },
-    { label: '10', value: '10' },
-    { label: '25', value: '25' },
-    { label: '40', value: '40' },
-    { label: '50', value: '50' }
+    // { label: '10', value: '10' },
+    { label: '25', value: '25' }
+    // { label: '40', value: '40' },
+    // { label: '50', value: '50' }
   ];
   const numberOfAnnotationsPicker = (
     <Card>
@@ -862,7 +849,7 @@ const AnnotatePageInner = () => {
         <Card className="flex flex-col flex-grow overflow-hidden min-h-[50vh] max-h-[70vh]">
           <CardHeader>
             <CardTitle>Annotations</CardTitle>
-            {id && (
+            {id !== 0 && (
               <div className="flex items-center mb-4">
                 <CardTitle>Editing annotation with id: {id}</CardTitle>
                 <Button
@@ -870,7 +857,7 @@ const AnnotatePageInner = () => {
                   onClick={(e) => {
                     e.preventDefault();
                     reset({
-                      id: null,
+                      id: 0,
                       dataset: 'echr_qa',
                       numberOfAnnotations: 5,
                       username: 'lawyer',
@@ -1037,27 +1024,31 @@ const AnnotatePageInner = () => {
 
 export default function AnnotatePage() {
   const { toast } = useToast();
+  const { getAll } = useIndexedDB(STORE_NAME);
   const getIndexedDBState = async () => {
-    const db = await openDB(DB_NAME, 1);
-    const formData = await db.get(STORE_NAME, 'formData');
-    if (formData) {
+    toast({
+      title: 'Created',
+      description: 'New annotation form created.'
+    });
+    const formDataItems = await getAll();
+    if (formDataItems.length > 0) {
+      const formData = formDataItems[0];
       toast({
         title: 'Synced',
         description: 'Continuing where we left off!.'
       });
+      return formData;
     }
-    return (
-      formData ?? {
-        id: null,
-        dataset: 'echr_qa',
-        numberOfAnnotations: 25,
-        username: 'lawyer',
-        password: '',
-        evaluations: {},
-        mapping: {},
-        tests: []
-      }
-    );
+    return {
+      id: 0,
+      dataset: 'echr_qa',
+      numberOfAnnotations: 25,
+      username: 'lawyer',
+      password: '',
+      evaluations: {},
+      mapping: {},
+      tests: []
+    };
   };
   const formMethods = useForm<FormValues>({
     async defaultValues() {

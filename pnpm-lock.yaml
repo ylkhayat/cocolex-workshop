@@ -99,9 +99,6 @@ importers:
       hyparquet:
         specifier: ^1.8.0
         version: 1.8.0
-      idb:
-        specifier: ^8.0.1
-        version: 8.0.1
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.0.0-rc-cd22717c-20241013)
@@ -132,6 +129,9 @@ importers:
       react-hook-form:
         specifier: ^7.54.2
         version: 7.54.2(react@19.0.0-rc-cd22717c-20241013)
+      react-indexed-db-hook:
+        specifier: ^1.0.14
+        version: 1.0.14(react-dom@19.0.0-rc-cd22717c-20241013(react@19.0.0-rc-cd22717c-20241013))(react@19.0.0-rc-cd22717c-20241013)
       react-resizable-panels:
         specifier: ^2.1.7
         version: 2.1.7(react-dom@19.0.0-rc-cd22717c-20241013(react@19.0.0-rc-cd22717c-20241013))(react@19.0.0-rc-cd22717c-20241013)
@@ -1711,9 +1711,6 @@ packages:
   hyparquet@1.8.0:
     resolution: {integrity: sha512-RnaZ4WxU1WTdJ3X0OsaTXpbBapTxX4WAAdj0EPVr150IxzKWzzDjQd+zOLa2u722YDrfm/F2N+sSyvdYX5SIpg==}
 
-  idb@8.0.1:
-    resolution: {integrity: sha512-EkBCzUZSdhJV8PxMSbeEV//xguVKZu9hZZulM+2gHXI0t2hGVU3eYE6/XnH77DS6FM2FY8wl17aDcu9vXpvLWQ==}
-
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
 
@@ -2037,6 +2034,12 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
+
+  react-indexed-db-hook@1.0.14:
+    resolution: {integrity: sha512-tQ6rWofgXUCBhZp9pRpWzthzPbjqcll5uXMo07lbQTKl47VyL9nw9wfVswRxxzS5yj5Sq/VHUkNUjamWbA/M/w==}
+    peerDependencies:
+      react: ^18.2.0
+      react-dom: ^18.2.0
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -3660,8 +3663,6 @@ snapshots:
 
   hyparquet@1.8.0: {}
 
-  idb@8.0.1: {}
-
   invariant@2.2.4:
     dependencies:
       loose-envify: 1.4.0
@@ -3929,6 +3930,11 @@ snapshots:
   react-hook-form@7.54.2(react@19.0.0-rc-cd22717c-20241013):
     dependencies:
       react: 19.0.0-rc-cd22717c-20241013
+
+  react-indexed-db-hook@1.0.14(react-dom@19.0.0-rc-cd22717c-20241013(react@19.0.0-rc-cd22717c-20241013))(react@19.0.0-rc-cd22717c-20241013):
+    dependencies:
+      react: 19.0.0-rc-cd22717c-20241013
+      react-dom: 19.0.0-rc-cd22717c-20241013(react@19.0.0-rc-cd22717c-20241013)
 
   react-is@16.13.1: {}
 
