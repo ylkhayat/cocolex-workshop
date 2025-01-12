@@ -141,7 +141,7 @@ const AnnotatePageInner = () => {
     ]
   });
   const { toast } = useToast();
-  const { update } = useIndexedDB(STORE_NAME);
+  const { update, deleteRecord } = useIndexedDB(STORE_NAME);
   const experimentsData = useExperiments();
   const [savedAnnotations, setSavedAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -849,27 +849,35 @@ const AnnotatePageInner = () => {
         <Card className="flex flex-col flex-grow overflow-hidden min-h-[50vh] max-h-[70vh]">
           <CardHeader>
             <CardTitle>Annotations</CardTitle>
-            {id !== 0 && (
-              <div className="flex items-center mb-4">
+            <div className="flex items-center mb-4">
+              {id !== 0 && (
                 <CardTitle>Editing annotation with id: {id}</CardTitle>
-                <Button
-                  className="ml-4"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    reset({
-                      id: 0,
-                      dataset: 'echr_qa',
-                      numberOfAnnotations: 5,
-                      username: 'lawyer',
-                      evaluations: {},
-                      tests: []
-                    });
-                  }}
-                >
-                  New Annotation
-                </Button>
-              </div>
-            )}
+              )}
+              <Button
+                className="ml-4"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (
+                    !confirm(
+                      'Are you sure you want to start a new annotation? This will delete all current progress.'
+                    )
+                  ) {
+                    return;
+                  }
+                  await deleteRecord(0);
+                  reset({
+                    id: 0,
+                    dataset: 'echr_qa',
+                    numberOfAnnotations: 5,
+                    username: 'lawyer',
+                    evaluations: {},
+                    tests: []
+                  });
+                }}
+              >
+                New Annotation
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-grow overflow-auto">
             {loading ? (
