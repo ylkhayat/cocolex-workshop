@@ -66,7 +66,8 @@ class KNNLM:
                                     context_texts: List[List[str]],
                                     overlap:float,
                                     layer_index=-1,
-                                    k=10):
+                                    k=10,
+                                    distance_method='euc'):
         assert overlap >= 0.0 and overlap <= 1.0, "Overlap must be between [0, 1]"
         assert isinstance(context_texts, list), "references must be a list of lists"
         batch_datastores = []
@@ -88,14 +89,21 @@ class KNNLM:
                         values.extend(next_tokens[j])
             if self.use_faiss:
                 keys = np.array(keys).reshape(-1, np.array(keys).shape[-1]).astype('float32')
-                nneighbors = faiss.IndexFlatL2(keys.shape[-1])
-                faiss.normalize_L2(keys)
+                if distance_method == 'cos':
+                    nneighbors = faiss.IndexFlatIP(keys.shape[-1])
+                elif distance_method == 'euc':
+                    nneighbors = faiss.IndexFlatL2(keys.shape[-1])
+                else:
+                    raise ValueError("distance_method must be either 'cos' or 'euc'")
+                if distance_method == 'euc':
+                    faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
                     nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
                 nneighbors.add(keys)
             else:
                 keys = np.array(keys).reshape(-1, np.array(keys).shape[-1])
-                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
+                metric = 'cosine' if distance_method == 'cos' else 'euclidean'
+                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric=metric, n_jobs=-1)
                 nneighbors.fit(keys)
             values = np.array(values).reshape(-1)
             batch_datastores.append({
@@ -105,9 +113,10 @@ class KNNLM:
         return batch_datastores
     
     def construct_datastore(self,
-                                    context_texts: List[str],
-                                    layer_index=-1,
-                                    k=10):
+                            context_texts: List[str],
+                            layer_index=-1,
+                            k=10,
+                            distance_method='euc'):
         batch_datastores = []
         for text in context_texts:
             single_input = self.tokenizer(text,
@@ -122,14 +131,21 @@ class KNNLM:
             next_tokens = single_input['input_ids'][:, 1:]
             if self.use_faiss:
                 keys = hidden_states[0].detach().cpu().numpy().astype('float32')
-                nneighbors = faiss.IndexFlatL2(keys.shape[-1])
-                faiss.normalize_L2(keys)
+                if distance_method == 'cos':
+                    nneighbors = faiss.IndexFlatIP(keys.shape[-1])
+                elif distance_method == 'euc':
+                    nneighbors = faiss.IndexFlatL2(keys.shape[-1])
+                else:
+                    raise ValueError("distance_method must be either 'cos' or 'euc'")
+                if distance_method == 'euc':
+                    faiss.normalize_L2(keys)
                 if torch.cuda.is_available():
                     nneighbors = faiss.index_cpu_to_all_gpus(nneighbors, ngpu=faiss.get_num_gpus())
                 nneighbors.add(keys)
             else:
                 keys = hidden_states[0].detach().cpu().numpy()
-                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric='euclidean', n_jobs=-1)
+                metric = 'cosine' if distance_method == 'cos' else 'euclidean'
+                nneighbors = NearestNeighbors(n_neighbors=k, algorithm='auto', metric=metric, n_jobs=-1)
                 nneighbors.fit(keys)
             values = next_tokens[0].detach().cpu().numpy()
             batch_datastores.append({
@@ -139,7 +155,7 @@ class KNNLM:
         return batch_datastores
     
 
-    def compute_knn_probs(self, batch_datastores, query, k=10, temperature=1.0):
+    def compute_knn_probs(self, batch_datastores, query, k=10, temperature=1.0, distance_method='euc'):
         batch_size = query.shape[0]
         knn_probs_list = []
         pad_idx = self.tokenizer.pad_token_id
@@ -150,14 +166,21 @@ class KNNLM:
             values = current_batch_datastore['values'].reshape(-1)
             if self.use_faiss:
                 query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy().astype('float32')
-                faiss.normalize_L2(query_flat)
+                if distance_method == 'euc':
+                    faiss.normalize_L2(query_flat)
                 distances, indices = nneighbors.search(query_flat, k=k)
                 distances = np.clip(distances, 1e-10, None)
-                logits = 1 / distances
+                if distance_method == 'euc':
+                    logits = 1 / distances
+                else:
+                    logits = distances
             else:
                 query_flat = query[i].reshape(-1, query.shape[-1]).cpu().numpy()
                 distances, indices = nneighbors.kneighbors(query_flat)
-                logits = 50 / distances
+                if distance_method == 'euc':
+                    logits = 50 / distances
+                else:
+                    logits = distances
             
             neighbor_values = values[indices]
             knn_logits = np.zeros((query_flat.shape[0], self.model.config.vocab_size))
@@ -258,7 +281,8 @@ class KNNLM:
                 temperature: float = 1.0,
                 min_length_ratio: float = 0.1,
                 use_faiss: bool = False,
-                generate_time_report: bool = False
+                generate_time_report: bool = False,
+                distance_method: str = 'euc'
                 ) -> List[List[int]]:
         if generate_time_report:
             assert len(prompts) == len(contexts) == 1, "Time report mode only supports batch size 1"
@@ -274,11 +298,13 @@ class KNNLM:
             batch_datastores = self.construct_datastore_plus(references,
                                                              overlap=0.5,
                                                              layer_index=datastore_from_layer_index,
-                                                             k=k)
+                                                             k=k,
+                                                             distance_method=distance_method)
         else:
             batch_datastores = self.construct_datastore(references,
                                                         layer_index=datastore_from_layer_index,
-                                                        k=k)
+                                                        k=k,
+                                                        distance_method=distance_method)
         if generate_time_report:
             monitor.stop_record("build_datastores")
 
@@ -317,9 +343,8 @@ class KNNLM:
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
         generated_tokens = [[] for _ in range(batch_size)] 
 
-        entropies_history = [previous_lambda]
-        lamba_history = [previous_lambda]
-
+        entropy_history = []
+        lamba_history = []
 
         if generate_time_report:
             average_tokenized_reference_length = sum(
@@ -373,7 +398,11 @@ class KNNLM:
                 query_to_knn = outputs_hidden_states[datastore_from_layer_index][:, -1:, :]
                 if generate_time_report:
                     monitor.start_record("knn")
-                knn_next_token_probs = self.compute_knn_probs(batch_datastores, query_to_knn, k=k, temperature=temperature)
+                knn_next_token_probs = self.compute_knn_probs(batch_datastores, 
+                                                              query_to_knn, 
+                                                              k=k, 
+                                                              temperature=temperature,
+                                                              distance_method=distance_method)
                 if generate_time_report:
                     monitor.stop_record("knn")
 
@@ -393,8 +422,8 @@ class KNNLM:
                         lamba = 1 / (1 + torch.exp(entropy - entropy_sigmoid_threshold))
                     lamba = torch.clamp(lamba, min=0.2, max=0.8) # to avoid extreme values
                     lamba = lambda_smoothing_factor * lamba + (1 - lambda_smoothing_factor) * previous_lambda
-                    entropies_history.append(entropy)
-                    lamba_history.append(lamba)
+                    entropy_history.append(entropy.item())
+                    lamba_history.append(lamba.item())
                     previous_lambda = lamba
                     assert torch.all(lamba >= 0.0) and torch.all(lamba <= 1.0), "Lambda must be between [0, 1]"
 
@@ -432,6 +461,6 @@ class KNNLM:
             report_json = monitor.get_report(generation_length=max(sent_lengths).item())
             return generated_tokens, report_json
 
-        return generated_tokens
+        return generated_tokens, entropy_history, lamba_history
 
 

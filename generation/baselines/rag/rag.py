@@ -134,6 +134,7 @@ class RAG:
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
 
         generated_tokens = [[] for _ in range(batch_size)]
+        entropy_history = []
 
         if generate_time_report:
             monitor.set_lengths(
@@ -151,7 +152,10 @@ class RAG:
                 model_inputs = self.model.prepare_inputs_for_generation(input_ids, **model_kwargs)
                 outputs = self.model(**model_inputs, return_dict=True)
                 next_token_logits = outputs.logits[:, -1, :]
-
+                original_next_token_probs = F.softmax(next_token_logits / temperature, dim=-1).float()
+                original_next_token_probs = torch.clamp(original_next_token_probs, min=1e-10)
+                entropy = -torch.sum(original_next_token_probs * torch.log(original_next_token_probs), dim=-1).unsqueeze(-1)
+                entropy_history.append(entropy.item())
                 model_kwargs["attention_mask"] = torch.cat(
                     [model_kwargs["attention_mask"], torch.ones((batch_size, 1), device=self.device)], 
                     dim=-1
@@ -192,4 +196,4 @@ class RAG:
             report_json = monitor.get_report(generation_length=max(sent_lengths).item())
             return generated_tokens, report_json
         
-        return generated_tokens
+        return generated_tokens, entropy_history

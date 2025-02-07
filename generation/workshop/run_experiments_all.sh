@@ -19,12 +19,12 @@ time_between_experiments=28
 models=(
     # meta-llama/Llama-3.1-8B-Instruct
     mistralai/Mistral-7B-Instruct-v0.3
-    Equall/Saul-7B-Instruct-v1 
+    # Equall/Saul-7B-Instruct-v1 
     )
 setups=(
     bm25_relevant_passages_oracle_documents 
-    bm25_oracle_passages_oracle_documents 
-    bm25_noisy_oracle_passages_oracle_documents
+    # bm25_oracle_passages_oracle_documents 
+    # bm25_noisy_oracle_passages_oracle_documents
     # dense_oracle_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft 
     # dense_relevant_passages_oracle_documents/jhu-clsp_LegalBERT-DPR-CLERC-ft
     )
@@ -33,21 +33,21 @@ cad_methods=(constant adacad)
 knnlm_methods=(constant entropy)
 knnlm_variants=(
     context 
-    context_adacad 
+    # context_adacad 
     # plus
     context_plus 
-    context_adacad_plus
+    # context_adacad_plus
     )
 datasets=(
     clerc
-    cuad
-    echr_qa
-    oal_qa
-    obli_qa
+    # cuad
+    # echr_qa
+    # oal_qa
+    # obli_qa
     )
-dataset_percentage=0.01
+# dataset_percentage=0.01
 # dataset_percentage=0.1
-# dataset_percentage=1.0
+dataset_percentage=1.0
 
 # Function to wait for an available GPU
 wait_for_gpu() {
@@ -128,7 +128,7 @@ should_run=0
 echo -e "${BOLD} [!]\t running mode '$run_mode'"
 echo -e "${BOLD} [!]\t variant mode '$variant_mode'"
 
-override=1
+override=0
 if [ ! -f "all_runs.json" ] || [ "$override" -eq 1 ]; then
     all_runs=()
     all_window_names=()

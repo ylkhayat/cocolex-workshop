@@ -1,7 +1,6 @@
 import json
 import sys
 
-import ipdb
 
 from generation.workshop.dataloader import ModelInputPreprocessor
 from generation.workshop.experiment_utils import load_experiment, parse_args_string
@@ -102,8 +101,7 @@ def process_run(run_item):
                 method = f"{method}-plus"
             method = f"{method}-{strategy}"
             if strategy == 'constant':
-                lamdas = [0.5]
-                args.lamdas = lamdas
+                lambas = [0.5]
             args.method = method
             config = {
                 "dataset_percentage": dataset_percentage,
@@ -116,7 +114,7 @@ def process_run(run_item):
             }
             preprocessor = ModelInputPreprocessor(config, silent=True)
             if strategy == 'constant':
-                for lamba in lamdas:
+                for lamba in lambas:
                     args.lamba = lamba
                     exists, finished, all_results = load_experiment(args, silent=True)
                     if args.override or not finished or len(all_results) < len(preprocessor.processed_dataset):
@@ -130,8 +128,7 @@ def process_run(run_item):
     except Exception as e:
         if "supported" in str(e):
             return None
-        ipdb.set_trace()
-        return run_item
+        raise e
 
 
 def start_filtering(all_runs):

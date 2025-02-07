@@ -55,7 +55,8 @@ def assign_args_modifications(args):
         args.max_new_tokens = 100
     elif 'echr' in args.dataset:
         args.max_new_tokens = 300
-        
+    if 'knnlm' in args.method and 'entropy' in args.strategy:
+        args.lamba = None
     if 'plus' in args.variant:
         if 'obli_qa' in args.dataset:
             args.use_faiss = True
@@ -86,9 +87,12 @@ def build_args_parser(method, current_args=None):
         parser.add_argument("--entropy_sigmoid_threshold", type=float, default=0.5)
         parser.add_argument("--entropy_strategy", type=str, choices=['exp', 'exp_norm', 'sig'], default='exp_norm')
         parser.add_argument("--lambda_smoothing_factor", type=float, default=0.5)
+        parser.add_argument("--distance_method", type=str, choices=['euc', 'cos'], default="euc")
+        parser.add_argument("--datastore_layer", type=int, default=-1)
+        parser.add_argument("--lamba", type=float, default=0.5)
     
     parser.add_argument("--max_new_tokens", type=int, default=200)
-    parser.add_argument("--method", type=str)
+    parser.add_argument("--method", type=str, default=method)
     parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.3")
     parser.add_argument("--setup", type=str, default="bm25_relevant_passages_oracle_documents")
     parser.add_argument("--split", type=str, default="test")
@@ -176,7 +180,7 @@ def load_experiment(args, silent=False):
     write_results(results, results_output_path)
     return exists, has_meta, results
 
-common_excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override", "device", "only_count_valid", "check_only"}
+common_excluded_keys = {"split", "model", "method", "setup", "top_k_passages", "override", "device", "only_count_valid", "check_only", "lambas"}
 excluded_keys  = common_excluded_keys | {"decoding_strategy"}
 results_path_excluded_keys = common_excluded_keys | {"is_truncated" , "dataset_percentage"}
 meta_path_excluded_keys = common_excluded_keys | {"is_truncated"}
@@ -248,22 +252,49 @@ def build_path(args):
                     g.write(line)
         print(f"[!] copied old meta to new meta path: {meta_output_path}")
     move_to_archive(old_meta_output_path)
-    
-    if "plus" in method:
-        current_results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
-        current_old_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_results_params.items() if key != "use_faiss"])
-        old_results_output_path = f"{common_output_path}/generations/{method}__{current_old_results_params_str}.jsonl"
-        current_results_params["use_faiss"] = False
-        new_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_results_params.items()])
-        new_results_output_path = f"{common_output_path}/generations/{method}__{new_results_params_str}.jsonl"
-        if detect_old_results_path(old_results_output_path, new_results_output_path):
-            print(f"[!] copying {old_results_output_path} to: {new_results_output_path}")
-            with open(old_results_output_path, "r") as f:
-                with open(new_results_output_path, "w") as g:
-                    for line in tqdm(f, desc="Copying results"):
-                        g.write(line)
-            print(f"[!] copied old results to new results path: {new_results_output_path}")
-        move_to_archive(old_results_output_path)
+    if "knnlm" in method:
+            current_results_params = {k: v for k, v in args.items() if k not in local_results_path_excluded_keys}
+            current_meta_params = {k: v for k, v in args.items() if k not in local_meta_path_excluded_keys}
+            old_current_results_params = copy.deepcopy(current_results_params)
+            old_current_meta_params = copy.deepcopy(current_meta_params)
+            # del old_current_results_params["lamba"]
+            del old_current_results_params["distance_method"]
+            # del old_current_meta_params["lamba"]
+            del old_current_meta_params["distance_method"]
+            # if "entropy" in old_current_results_params["strategy"]:
+                # old_current_results_params["lamba"] = None
+                # old_current_meta_params["lamba"] = None
+            # else:
+            #     assert "lamba" in current_results_params, "lamba not in old current results params"
+            #     old_current_results_params["lambas"] = [current_results_params['lamba']]
+            #     old_current_results_params["lamba"] = current_results_params['lamba']
+            #     old_current_meta_params["lambas"] = [current_meta_params['lamba']]
+            #     old_current_meta_params["lamba"] = current_meta_params['lamba']
+            current_old_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in old_current_results_params.items() if key != "distance_method"])
+            old_results_output_path = f"{common_output_path}/generations/{method}__{current_old_results_params_str}.jsonl"
+            new_results_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_results_params.items()])
+            new_results_output_path = f"{common_output_path}/generations/{method}__{new_results_params_str}.jsonl"
+            # ipdb.set_trace()
+            if detect_old_results_path(old_results_output_path, new_results_output_path):
+                print(f"[!] copying {old_results_output_path} to: {new_results_output_path}")
+                with open(old_results_output_path, "r") as f:
+                    with open(new_results_output_path, "w") as g:
+                        for line in tqdm(f, desc="Copying results"):
+                            g.write(line)
+                print(f"[!] copied old results to new results path: {new_results_output_path}")
+            current_old_meta_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in old_current_meta_params.items() if key != "distance_method"])
+            old_meta_output_path = f"{common_output_path}/meta/{method}__{current_old_meta_params_str}.json"
+            new_meta_params_str = "_".join([f"{get_short_key(key)}-{value}" for key, value in current_meta_params.items()])
+            new_meta_output_path = f"{common_output_path}/meta/{method}__{new_meta_params_str}.json"
+            if detect_old_results_path(old_meta_output_path, new_meta_output_path):
+                print(f"[!] copying {old_meta_output_path} to: {new_meta_output_path}")
+                with open(old_meta_output_path, "r") as f:
+                    with open(new_meta_output_path, "w") as g:
+                        for line in tqdm(f, desc="Copying results"):
+                            g.write(line)
+                print(f"[!] copied old results to new results path: {new_meta_output_path}")
+            move_to_archive(old_results_output_path)
+            move_to_archive(old_meta_output_path)
 
     os.makedirs(os.path.dirname(results_output_path), exist_ok=True)
     os.makedirs(os.path.dirname(meta_output_path), exist_ok=True)    
@@ -322,6 +353,8 @@ def evaluate(results, device, reference_dataset, args, has_new_results=True, ali
     unfiltered_results_length = len(results)
     results = [result for result in results if len(result['gen'].strip()) > 20]
     print(f"[!] filtering results, filtered {unfiltered_results_length - len(results)} invalid results")
+    if len(results) == 0:
+        raise ValueError("No valid results to evaluate")
     # ipdb.set_trace()
     method = args.method
     print(f"[!] evaluation for method: {method}")

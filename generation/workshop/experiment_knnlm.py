@@ -23,10 +23,13 @@ args = build_args_parser(method="knnlm")
 batch_size = args.batch_size
 dataset = args.dataset
 dataset_percentage = args.dataset_percentage
+datastore_layer = args.datastore_layer
 decoding_strategy = args.decoding_strategy
 device = args.device
+distance_method = args.distance_method
 entropy_sigmoid_threshold = args.entropy_sigmoid_threshold
 entropy_strategy = args.entropy_strategy
+lamba = args.lamba
 lambda_smoothing_factor = args.lambda_smoothing_factor
 max_new_tokens = args.max_new_tokens
 model_name = args.model
@@ -51,10 +54,6 @@ if "adacad" in variant:
 if "plus" in variant:
     method = f"{method}-plus"
 method = f"{method}-{strategy}"
-if strategy == 'constant':
-    lamdas = [0.5]
-    args.lamdas = lamdas
-layers = [-1]
 args.method = method
 print_args(args)
 
@@ -121,6 +120,7 @@ try:
                     strategy=strategy,
                     k=k,
                     variant=variant,
+                    distance_method=distance_method,
                     entropy_strategy=entropy_strategy,
                     entropy_sigmoid_threshold=entropy_sigmoid_threshold,
                     lambda_smoothing_factor=lambda_smoothing_factor,
@@ -165,12 +165,9 @@ try:
             send_slack_notification(f"Error in experiment: {results_output_path}!")
             sys.exit(1)
     if strategy == 'constant':
-        for lamba in tqdm(lamdas, desc="Lamba"):
-            for layer_index in layers:
-                carry_experiment(lamba, "constant", 10, layer_index)
+        carry_experiment(lamba, "constant", 10, datastore_layer)
     else:
-        for layer_index in layers:
-            carry_experiment(None, "entropy", 10, layer_index)
+        carry_experiment(None, "entropy", 10, datastore_layer)
 except Exception as e:
     print(f"[!] Error: {e}")
     traceback.print_exc()
