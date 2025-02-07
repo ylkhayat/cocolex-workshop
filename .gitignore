@@ -27,3 +27,4 @@ generation/dataset-preparation/obli_qa/obliqa_documents.json
 
 *.zip
 *.gz
+archive
