@@ -3,7 +3,7 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 const MAIN_PATH =
-  'https://raw.githubusercontent.com/ylkhayat/cocolex-basement/refs/heads/main/';
+  'https://raw.githubusercontent.com/ylkhayat/cocolex-workshop/basement/refs/heads/main/';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const filePath = url.searchParams.get('path');
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         ]
       };
       const curlResponse = await fetch(
-        `https://github.com/ylkhayat/cocolex-basement.git/info/lfs/objects/batch`,
+        `https://github.com/ylkhayat/cocolex-workshop/basement.git/info/lfs/objects/batch`,
         {
           method: 'POST',
           headers: {

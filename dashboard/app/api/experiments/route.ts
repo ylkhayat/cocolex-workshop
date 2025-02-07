@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const EXPERIMENTS_URL =
-  'https://github.com/ylkhayat/cocolex-basement/raw/refs/heads/main/experiments.json';
+  'https://github.com/ylkhayat/cocolex-workshop/basement/raw/refs/heads/main/experiments.json';
 
 export async function GET(req: NextRequest) {
   try {
